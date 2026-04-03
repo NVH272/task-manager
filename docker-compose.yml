@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+
+  # server:
+  #   build: ./server
+  #   container_name: backend
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     - mongo
+  #   environment:
+  #     - MONGO_URI=mongodb://mongo:27017/taskdb
+
+  server:
+      build: ./server
+      container_name: backend
+      ports:
+        - "5000:5000"
+      depends_on:
+        - mongo
+      environment:
+        - PORT=${PORT}
+        - MONGO_URI=${MONGO_URI}
+        - JWT_SECRET=${JWT_SECRET}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        
+    
+  client:
+    build: ./client
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
