@@ -8,16 +8,23 @@ passport.use(new GoogleStrategy({
   callbackURL: "/auth/google/callback"
 },
 async (accessToken, refreshToken, profile, done) => {
-  let user = await User.findOne({ googleId: profile.id });
+  try {
+    let user = await User.findOne({ googleId: profile.id });
 
-  if (!user) {
-    user = new User({
-      googleId: profile.id,
-      email: profile.emails[0].value
-    });
+    if (!user) {
+      user = new User({
+        googleId: profile.id,
+        email: profile.emails[0].value,
+        name: profile.displayName || "Người dùng Google"
+      });
 
-    await user.save();
+      await user.save();
+    }
+
+    return done(null, user);
   }
-
-  return done(null, user);
+  catch (error) {
+    console.error("LỖI GOOGLE AUTH:", error);
+    return done(error, null);
+  }
 }));

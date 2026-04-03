@@ -64,8 +64,25 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    setToken(savedToken);
+    // 1. Kiểm tra xem trên URL có tham số ?token=... không (do Google gửi về)
+    const queryParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = queryParams.get("token");
+
+    if (tokenFromUrl) {
+      // Nếu có token trên URL:
+      // - Lưu nó vào LocalStorage để dùng cho các lần sau
+      localStorage.setItem("token", tokenFromUrl);
+      // - Cập nhật State để React cho phép vào trang Task
+      setToken(tokenFromUrl);
+      
+      // - (Tùy chọn) Xóa cái đoạn ?token=... trên URL cho đẹp trình duyệt
+      window.history.replaceState({}, document.title, "/");
+    } else {
+      // 2. Nếu không có trên URL, lúc này mới tìm trong LocalStorage như cũ
+      const savedToken = localStorage.getItem("token");
+      setToken(savedToken);
+    }
+    
     setLoading(false);
   }, []);
 

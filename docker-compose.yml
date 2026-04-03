@@ -7,16 +7,6 @@ services:
     ports:
       - "27017:27017"
 
-  # server:
-  #   build: ./server
-  #   container_name: backend
-  #   ports:
-  #     - "5000:5000"
-  #   depends_on:
-  #     - mongo
-  #   environment:
-  #     - MONGO_URI=mongodb://mongo:27017/taskdb
-
   server:
       build: ./server
       container_name: backend
@@ -30,8 +20,11 @@ services:
         - JWT_SECRET=${JWT_SECRET}
         - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
         - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-        
-    
+      volumes:
+        - ./server:/app
+        - /app/node_modules # Bảo vệ thư mục thư viện bên trong container
+      command: npx -y nodemon -L server.js # Dùng nodemon thay cho lệnh node mặc định
+
   client:
     build: ./client
     container_name: frontend
