@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import API from "./services/api";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Layout from "./components/Layout";
 
 function TaskPage() {
   const [tasks, setTasks] = useState([]);
@@ -35,23 +36,49 @@ function TaskPage() {
     fetchTasks();
   }, []);
 
+  // return (
+  //   <div style={{ padding: 20 }}>
+  //     <h1>Task Manager</h1>
+  //     <button onClick={logout} style={{ marginBottom: 20 }}>Logout</button>
+
+  //     <input
+  //       value={title}
+  //       onChange={(e) => setTitle(e.target.value)}
+  //       placeholder="Enter task"
+  //     />
+  //     <button onClick={addTask}>Add</button>
+
+  //     <ul>
+  //       {tasks.map(task => (
+  //         <li key={task._id}>
+  //           {task.title}
+  //           <button onClick={() => deleteTask(task._id)}>X</button>
+  //         </li>
+  //       ))}
+  //     </ul>
+  //   </div>
+  // );
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Task Manager</h1>
-      <button onClick={logout} style={{ marginBottom: 20 }}>Logout</button>
+    <div style={{ background: "white", padding: 20, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+      {/* Đã xóa thẻ <h1> và nút Logout ở đây vì Header đã lo việc đó */}
+      
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Nhập công việc mới..."
+          style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ccc" }}
+        />
+        <button onClick={addTask} style={{ padding: "10px 20px", background: "#28a745", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+          Thêm
+        </button>
+      </div>
 
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Enter task"
-      />
-      <button onClick={addTask}>Add</button>
-
-      <ul>
+      <ul style={{ listStyleType: "none", padding: 0 }}>
         {tasks.map(task => (
-          <li key={task._id}>
+          <li key={task._id} style={{ display: "flex", justifyContent: "space-between", padding: "12px", borderBottom: "1px solid #eee" }}>
             {task.title}
-            <button onClick={() => deleteTask(task._id)}>X</button>
+            <button onClick={() => deleteTask(task._id)} style={{ background: "#ff4d4f", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", padding: "4px 8px" }}>X</button>
           </li>
         ))}
       </ul>
@@ -93,12 +120,21 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Các trang KHÔNG cần Layout (hiển thị trơn) */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Các trang CẦN Layout (đã đăng nhập mới được vào) */}
         <Route 
           path="/" 
-          element={token ? <TaskPage /> : <Navigate to="/login" replace />}
-        />
+          element={token ? <Layout /> : <Navigate to="/login" replace />}
+        >
+          {/* Thuộc tính 'index' nghĩa là khi URL là "/" thì hiện TaskPage vào chỗ <Outlet /> */}
+          <Route index element={<TaskPage />} />
+          
+          {/* Ví dụ sau này bạn thêm trang Profile, chỉ cần viết thêm ở đây: */}
+          {/* <Route path="profile" element={<ProfilePage />} /> */}
+        </Route>
       </Routes>
     </Router>
   );
