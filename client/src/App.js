@@ -36,28 +36,6 @@ function TaskPage() {
     fetchTasks();
   }, []);
 
-  // return (
-  //   <div style={{ padding: 20 }}>
-  //     <h1>Task Manager</h1>
-  //     <button onClick={logout} style={{ marginBottom: 20 }}>Logout</button>
-
-  //     <input
-  //       value={title}
-  //       onChange={(e) => setTitle(e.target.value)}
-  //       placeholder="Enter task"
-  //     />
-  //     <button onClick={addTask}>Add</button>
-
-  //     <ul>
-  //       {tasks.map(task => (
-  //         <li key={task._id}>
-  //           {task.title}
-  //           <button onClick={() => deleteTask(task._id)}>X</button>
-  //         </li>
-  //       ))}
-  //     </ul>
-  //   </div>
-  // );
   return (
     <div style={{ background: "white", padding: 20, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
       {/* Đã xóa thẻ <h1> và nút Logout ở đây vì Header đã lo việc đó */}

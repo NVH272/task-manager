@@ -8,22 +8,18 @@ services:
       - "27017:27017"
 
   server:
-      build: ./server
-      container_name: backend
-      ports:
-        - "5000:5000"
-      depends_on:
-        - mongo
-      environment:
-        - PORT=${PORT}
-        - MONGO_URI=${MONGO_URI}
-        - JWT_SECRET=${JWT_SECRET}
-        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      volumes:
-        - ./server:/app
-        - /app/node_modules # Bảo vệ thư mục thư viện bên trong container
-      command: npx -y nodemon -L server.js # Dùng nodemon thay cho lệnh node mặc định
+    build: ./server
+    container_name: backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+    env_file:
+      - ./.env
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: npx -y nodemon -L server.js
 
   client:
     build: ./client
@@ -32,3 +28,8 @@ services:
       - "3000:3000"
     depends_on:
       - server
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - WATCHPACK_POLLING=true
