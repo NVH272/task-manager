@@ -5,6 +5,7 @@ import API from "./services/api";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Layout from "./components/Layout";
+import LandingPage from "./pages/LandingPage";
 
 function TaskPage() {
   const [tasks, setTasks] = useState([]);
@@ -38,7 +39,6 @@ function TaskPage() {
 
   return (
     <div style={{ background: "white", padding: 20, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-      {/* Đã xóa thẻ <h1> và nút Logout ở đây vì Header đã lo việc đó */}
       
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <input
@@ -79,6 +79,7 @@ function App() {
       localStorage.setItem("token", tokenFromUrl);
       // - Cập nhật State để React cho phép vào trang Task
       setToken(tokenFromUrl);
+      window.location.href = "/tasks";
       
       // - (Tùy chọn) Xóa cái đoạn ?token=... trên URL cho đẹp trình duyệt
       window.history.replaceState({}, document.title, "/");
@@ -98,20 +99,21 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Các trang KHÔNG cần Layout (hiển thị trơn) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* Các trang CẦN Layout (đã đăng nhập mới được vào) */}
-        <Route 
-          path="/" 
-          element={token ? <Layout /> : <Navigate to="/login" replace />}
-        >
-          {/* Thuộc tính 'index' nghĩa là khi URL là "/" thì hiện TaskPage vào chỗ <Outlet /> */}
-          <Route index element={<TaskPage />} />
+        {/* Layout bọc TRỌN VẸN toàn bộ ứng dụng */}
+        <Route path="/" element={<Layout />}>
           
-          {/* Ví dụ sau này bạn thêm trang Profile, chỉ cần viết thêm ở đây: */}
-          {/* <Route path="profile" element={<ProfilePage />} /> */}
+          {/* Trang chủ */}
+          <Route index element={<LandingPage />} /> 
+          
+          {/* 2 Trang xác thực */}
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          
+          {/* Trang không gian làm việc */}
+          <Route 
+            path="tasks" 
+            element={token ? <TaskPage /> : <Navigate to="/login" replace />} 
+          />
         </Route>
       </Routes>
     </Router>

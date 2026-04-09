@@ -12,7 +12,7 @@ function Login() {
     try {
       const res = await API.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      window.location.href = "/";
+      window.location.href = "/tasks";
     } catch (err) {
       setError(err.response?.data?.message || "Đăng nhập thất bại");
     }
