@@ -6,6 +6,8 @@ services:
     container_name: mongodb
     ports:
       - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
 
   server:
     build: ./server
@@ -33,3 +35,6 @@ services:
       - /app/node_modules
     environment:
       - WATCHPACK_POLLING=true
+      
+volumes:
+  mongo-data:

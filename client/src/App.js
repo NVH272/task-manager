@@ -6,63 +6,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Layout from "./components/Layout";
 import LandingPage from "./pages/LandingPage";
-
-function TaskPage() {
-  const [tasks, setTasks] = useState([]);
-  const [title, setTitle] = useState("");
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  };
-
-  const fetchTasks = async () => {
-    const res = await API.get("/tasks");
-    setTasks(res.data);
-  };
-
-  const addTask = async () => {
-    if (!title) return;
-    await API.post("/tasks", { title });
-    setTitle("");
-    fetchTasks();
-  };
-
-  const deleteTask = async (id) => {
-    await API.delete(`/tasks/${id}`);
-    fetchTasks();
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  return (
-    <div style={{ background: "white", padding: 20, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-      
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nhập công việc mới..."
-          style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ccc" }}
-        />
-        <button onClick={addTask} style={{ padding: "10px 20px", background: "#28a745", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-          Thêm
-        </button>
-      </div>
-
-      <ul style={{ listStyleType: "none", padding: 0 }}>
-        {tasks.map(task => (
-          <li key={task._id} style={{ display: "flex", justifyContent: "space-between", padding: "12px", borderBottom: "1px solid #eee" }}>
-            {task.title}
-            <button onClick={() => deleteTask(task._id)} style={{ background: "#ff4d4f", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", padding: "4px 8px" }}>X</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+import TaskPage from "./pages/TaskPage";
 
 function App() {
   const [token, setToken] = useState(null);
