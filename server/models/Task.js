@@ -8,6 +8,11 @@ const taskSchema = new mongoose.Schema({
   completed: {
     type: Boolean,
     default: false
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId, // Kiểu dữ liệu là ID của MongoDB
+    ref: "User", // Liên kết với bảng User
+    required: true // Bắt buộc mọi Task phải có chủ
   }
 }, { timestamps: true });
 

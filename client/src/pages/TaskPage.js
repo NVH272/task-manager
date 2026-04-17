@@ -6,6 +6,7 @@ function TaskPage() {
   const [title, setTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
+  
   const fetchTasks = async () => {
     try {
       const res = await API.get("/tasks");
