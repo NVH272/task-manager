@@ -6,7 +6,9 @@ function TaskPage() {
   const [title, setTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
-  
+  const [editingId, setEditingId] = useState(null); // Lưu ID của task đang được sửa
+  const [editTitle, setEditTitle] = useState(""); // Lưu nội dung chữ đang gõ
+
   const fetchTasks = async () => {
     try {
       const res = await API.get("/tasks");
@@ -34,6 +36,26 @@ function TaskPage() {
       fetchTasks();
     } catch (error) {
       console.error("Lỗi khi xóa task", error);
+    }
+  };
+
+  const startEditing = (task) => {
+    setEditingId(task._id); // Bật chế độ sửa cho task này
+    setEditTitle(task.title); // Đổ chữ cũ vào ô input
+  };
+
+  const saveEdit = async (id) => {
+    // Nếu xóa hết chữ mà bấm lưu thì tự động hủy sửa
+    if (!editTitle.trim()) {
+      setEditingId(null); 
+      return; 
+    }
+    try {
+      await API.put(`/tasks/${id}`, { title: editTitle });
+      setEditingId(null); // Tắt form sửa
+      fetchTasks(); // Tải lại danh sách
+    } catch (error) {
+      console.error("Lỗi khi sửa task", error);
     }
   };
 
@@ -204,20 +226,64 @@ function TaskPage() {
       ) : (
         <ul style={styles.taskList}>
           {tasks.map(task => (
-            <li key={task._id} style={styles.taskItem}>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                {/* Nút check tròn (chỉ mang tính trang trí) */}
-                <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: "1px solid #ccc" }}></div>
-                {task.title}
-              </div>
-              <button 
-                onClick={() => deleteTask(task._id)} 
-                style={styles.deleteBtn}
-                onMouseOver={(e) => e.target.style.color = "#E44332"}
-                onMouseOut={(e) => e.target.style.color = "#aaa"}
-              >
-                ×
-              </button>
+            <li 
+              key={task._id} 
+              style={{
+                ...styles.taskItem, 
+                // Xóa padding và viền khi đang ở chế độ sửa để form fit vừa vặn
+                padding: editingId === task._id ? "0" : "12px 0", 
+                borderBottom: editingId === task._id ? "none" : "1px solid #f0f0f0"
+              }}
+            >
+              {/* NẾU ĐANG SỬA THÌ HIỆN FORM NÀY */}
+              {editingId === task._id ? (
+                <div style={{...styles.addForm, width: "100%", marginBottom: 0, marginTop: "10px"}}>
+                  <input 
+                    value={editTitle} 
+                    onChange={(e) => setEditTitle(e.target.value)} 
+                    style={styles.input} 
+                    autoFocus 
+                    onKeyDown={(e) => { 
+                      if (e.key === 'Enter') saveEdit(task._id); 
+                      if (e.key === 'Escape') setEditingId(null); 
+                    }} 
+                  />
+                  <div style={styles.actionButtons}>
+                    <button onClick={() => saveEdit(task._id)} style={styles.btnSubmit}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={styles.btnCancel}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                /* NẾU BÌNH THƯỜNG THÌ HIỆN CHỮ VÀ CÁC NÚT HÀNH ĐỘNG */
+                <>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: "1px solid #ccc" }}></div>
+                    {task.title}
+                  </div>
+                  
+                  <div style={styles.taskActions}>
+                    {/* Nút Sửa (Bút chì) */}
+                    <button 
+                      onClick={() => startEditing(task)} 
+                      style={styles.iconBtn}
+                      onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
+                      onMouseOut={(e) => e.currentTarget.style.color = "#aaa"}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+
+                    {/* Nút Xóa (Thùng rác) */}
+                    <button 
+                      onClick={() => deleteTask(task._id)} 
+                      style={styles.iconBtn}
+                      onMouseOver={(e) => e.currentTarget.style.color = "#E44332"}
+                      onMouseOut={(e) => e.currentTarget.style.color = "#aaa"}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
