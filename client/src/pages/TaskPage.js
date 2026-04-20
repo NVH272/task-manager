@@ -47,8 +47,8 @@ function TaskPage() {
   const saveEdit = async (id) => {
     // Nếu xóa hết chữ mà bấm lưu thì tự động hủy sửa
     if (!editTitle.trim()) {
-      setEditingId(null); 
-      return; 
+      setEditingId(null);
+      return;
     }
     try {
       await API.put(`/tasks/${id}`, { title: editTitle });
@@ -56,6 +56,15 @@ function TaskPage() {
       fetchTasks(); // Tải lại danh sách
     } catch (error) {
       console.error("Lỗi khi sửa task", error);
+    }
+  };
+
+  const toggleComplete = async (task) => {
+    try {
+      await API.put(`/tasks/${task._id}`, { completed: !task.completed });
+      fetchTasks();
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái", error);
     }
   };
 
@@ -177,8 +186,8 @@ function TaskPage() {
 
       {/* --- NÚT BẬT FORM THÊM TASK --- */}
       {!isAdding ? (
-        <button 
-          style={styles.addTaskTrigger} 
+        <button
+          style={styles.addTaskTrigger}
           onClick={() => setIsAdding(true)}
           onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
           onMouseOut={(e) => e.currentTarget.style.color = "#666"}
@@ -216,9 +225,9 @@ function TaskPage() {
       {tasks.length === 0 ? (
         <div style={styles.emptyState}>
           {/* Bạn có thể tải bức ảnh chú ong trong hình của bạn về, bỏ vào thư mục public/images và đổi src thành "/images/empty-state.png" */}
-          <img 
-            src="https://illustrations.popsy.co/amber/surreal-hourglass.svg" 
-            alt="All done" 
+          <img
+            src="https://illustrations.popsy.co/amber/surreal-hourglass.svg"
+            alt="All done"
             style={styles.emptyImage}
           />
           <p style={{ fontSize: "15px", fontWeight: "500" }}>You're all done for today!</p>
@@ -226,27 +235,27 @@ function TaskPage() {
       ) : (
         <ul style={styles.taskList}>
           {tasks.map(task => (
-            <li 
-              key={task._id} 
+            <li
+              key={task._id}
               style={{
-                ...styles.taskItem, 
+                ...styles.taskItem,
                 // Xóa padding và viền khi đang ở chế độ sửa để form fit vừa vặn
-                padding: editingId === task._id ? "0" : "12px 0", 
+                padding: editingId === task._id ? "0" : "12px 0",
                 borderBottom: editingId === task._id ? "none" : "1px solid #f0f0f0"
               }}
             >
               {/* NẾU ĐANG SỬA THÌ HIỆN FORM NÀY */}
               {editingId === task._id ? (
-                <div style={{...styles.addForm, width: "100%", marginBottom: 0, marginTop: "10px"}}>
-                  <input 
-                    value={editTitle} 
-                    onChange={(e) => setEditTitle(e.target.value)} 
-                    style={styles.input} 
-                    autoFocus 
-                    onKeyDown={(e) => { 
-                      if (e.key === 'Enter') saveEdit(task._id); 
-                      if (e.key === 'Escape') setEditingId(null); 
-                    }} 
+                <div style={{ ...styles.addForm, width: "100%", marginBottom: 0, marginTop: "10px" }}>
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    style={styles.input}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEdit(task._id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
                   />
                   <div style={styles.actionButtons}>
                     <button onClick={() => saveEdit(task._id)} style={styles.btnSubmit}>Save</button>
@@ -257,14 +266,42 @@ function TaskPage() {
                 /* NẾU BÌNH THƯỜNG THÌ HIỆN CHỮ VÀ CÁC NÚT HÀNH ĐỘNG */
                 <>
                   <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: "1px solid #ccc" }}></div>
-                    {task.title}
+                    {/* Nút check tròn (Giờ đã có thể bấm, đổi màu và có dấu tick) */}
+                    <div
+                      onClick={() => toggleComplete(task)}
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "50%",
+                        border: task.completed ? "none" : "1px solid #ccc",
+                        backgroundColor: task.completed ? "#3A924A" : "transparent",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      {task.completed && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Tên công việc (Làm mờ và gạch ngang nếu đã xong) */}
+                    <span style={{
+                      textDecoration: task.completed ? "line-through" : "none",
+                      color: task.completed ? "#aaa" : "#202020",
+                      transition: "all 0.2s"
+                    }}>
+                      {task.title}
+                    </span>
                   </div>
-                  
+
                   <div style={styles.taskActions}>
                     {/* Nút Sửa (Bút chì) */}
-                    <button 
-                      onClick={() => startEditing(task)} 
+                    <button
+                      onClick={() => startEditing(task)}
                       style={styles.iconBtn}
                       onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
                       onMouseOut={(e) => e.currentTarget.style.color = "#aaa"}
@@ -273,8 +310,8 @@ function TaskPage() {
                     </button>
 
                     {/* Nút Xóa (Thùng rác) */}
-                    <button 
-                      onClick={() => deleteTask(task._id)} 
+                    <button
+                      onClick={() => deleteTask(task._id)}
                       style={styles.iconBtn}
                       onMouseOver={(e) => e.currentTarget.style.color = "#E44332"}
                       onMouseOut={(e) => e.currentTarget.style.color = "#aaa"}

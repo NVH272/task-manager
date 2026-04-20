@@ -3,7 +3,7 @@ const Task = require("../models/Task");
 exports.getTasks = async (req, res) => {
   try {
     // req.user.id được lấy từ middleware auth
-    const tasks = await Task.find({ user: req.user.id }); 
+    const tasks = await Task.find({ user: req.user.id });
     res.status(200).json(tasks);
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy danh sách công việc" });
@@ -16,7 +16,7 @@ exports.createTask = async (req, res) => {
       title: req.body.title,
       user: req.user.id // Đóng dấu bản quyền cho người tạo
     });
-    
+
     await newTask.save();
     res.status(201).json(newTask);
   } catch (error) {
@@ -29,7 +29,7 @@ exports.updateTask = async (req, res) => {
     // Tìm task theo ID và ID của user, sau đó cập nhật tiêu đề mới
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id }, // Điều kiện tìm kiếm
-      { title: req.body.title }, // Dữ liệu cập nhật
+      { $set: req.body }, // Dữ liệu cập nhật
       { new: true } // Trả về dữ liệu mới sau khi sửa
     );
 
@@ -45,8 +45,8 @@ exports.updateTask = async (req, res) => {
 
 exports.deleteTask = async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({ 
-      _id: req.params.id, 
+    const task = await Task.findOneAndDelete({
+      _id: req.params.id,
       user: req.user.id // Phải là task của mình thì mới được xóa
     });
 
