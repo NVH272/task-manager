@@ -13,6 +13,14 @@ const taskSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, // Kiểu dữ liệu là ID của MongoDB
     ref: "User", // Liên kết với bảng User
     required: true // Bắt buộc mọi Task phải có chủ
+  },
+  deadline: {
+    type: Date
+  },
+  priority: {
+    type: String,
+    enum: ['Low', 'Medium', 'High'],
+    default: 'Medium'
   }
 }, { timestamps: true });
 

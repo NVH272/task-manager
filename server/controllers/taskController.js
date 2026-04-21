@@ -13,7 +13,7 @@ exports.getTasks = async (req, res) => {
 exports.createTask = async (req, res) => {
   try {
     const newTask = new Task({
-      title: req.body.title,
+      ...req.body,
       user: req.user.id // Đóng dấu bản quyền cho người tạo
     });
 

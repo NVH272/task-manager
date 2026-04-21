@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
 
+const getDeadlineStatus = (date) => {
+  if (!date) return null;
+  const now = new Date();
+  const d = new Date(date);
+  now.setHours(0, 0, 0, 0); // Đưa về 0h để tính số ngày cho chuẩn
+  d.setHours(0, 0, 0, 0);
+  const diff = d - now;
+  if (diff < 0) return "overdue"; // Quá hạn
+  if (diff === 0) return "urgent"; // Sắp hết hạn (trong hôm nay)
+  return "normal";
+};
+
 function TaskPage() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
@@ -8,6 +20,9 @@ function TaskPage() {
 
   const [editingId, setEditingId] = useState(null); // Lưu ID của task đang được sửa
   const [editTitle, setEditTitle] = useState(""); // Lưu nội dung chữ đang gõ
+
+  const [deadline, setDeadline] = useState("");
+  const [priority, setPriority] = useState("Medium");
 
   const fetchTasks = async () => {
     try {
@@ -21,8 +36,11 @@ function TaskPage() {
   const addTask = async () => {
     if (!title.trim()) return;
     try {
-      await API.post("/tasks", { title });
+      // Gửi kèm deadline và priority khi tạo mới
+      await API.post("/tasks", { title, deadline, priority });
       setTitle("");
+      setDeadline(""); // Reset lại ngày
+      setPriority("Medium"); // Reset lại độ ưu tiên
       setIsAdding(false); // Thêm xong thì đóng form lại cho gọn
       fetchTasks();
     } catch (error) {
@@ -42,6 +60,10 @@ function TaskPage() {
   const startEditing = (task) => {
     setEditingId(task._id); // Bật chế độ sửa cho task này
     setEditTitle(task.title); // Đổ chữ cũ vào ô input
+    // Lấy ngày chuẩn (YYYY-MM-DD) để đổ vào input type="date"
+    const dateStr = task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : "";
+    setDeadline(dateStr);
+    setPriority(task.priority || "Medium");
   };
 
   const saveEdit = async (id) => {
@@ -51,8 +73,12 @@ function TaskPage() {
       return;
     }
     try {
-      await API.put(`/tasks/${id}`, { title: editTitle });
+      // Gửi cả ngày và ưu tiên lên khi sửa
+      await API.put(`/tasks/${id}`, { title: editTitle, deadline, priority });
       setEditingId(null); // Tắt form sửa
+      // Reset lại các trường tạm
+      setDeadline("");
+      setPriority("Medium");
       fetchTasks(); // Tải lại danh sách
     } catch (error) {
       console.error("Lỗi khi sửa task", error);
@@ -123,6 +149,13 @@ function TaskPage() {
       padding: "5px",
       boxSizing: "border-box",
     },
+    inputSmall: {
+      padding: "6px",
+      borderRadius: "4px",
+      border: "1px solid #ccc",
+      fontSize: "13px",
+      outline: "none"
+    },
     actionButtons: {
       display: "flex",
       gap: "10px",
@@ -165,7 +198,7 @@ function TaskPage() {
     taskItem: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "flex-start", // Đổi thành flex-start để các dòng căng đều từ trên xuống
       padding: "12px 0",
       borderBottom: "1px solid #f0f0f0",
       fontSize: "14px",
@@ -177,6 +210,16 @@ function TaskPage() {
       border: "none",
       cursor: "pointer",
       fontSize: "16px",
+    },
+    iconBtn: {
+      background: "transparent",
+      color: "#aaa",
+      border: "none",
+      cursor: "pointer",
+      padding: "4px",
+      display: "flex",
+      alignItems: "center",
+      transition: "color 0.2s",
     }
   };
 
@@ -188,7 +231,11 @@ function TaskPage() {
       {!isAdding ? (
         <button
           style={styles.addTaskTrigger}
-          onClick={() => setIsAdding(true)}
+          onClick={() => {
+            setIsAdding(true);
+            setDeadline(""); // Reset form mỗi khi mở
+            setPriority("Medium");
+          }}
           onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
           onMouseOut={(e) => e.currentTarget.style.color = "#666"}
         >
@@ -214,6 +261,23 @@ function TaskPage() {
               if (e.key === 'Escape') setIsAdding(false);
             }}
           />
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              style={styles.inputSmall}
+            />
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              style={styles.inputSmall}
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
           <div style={styles.actionButtons}>
             <button onClick={addTask} style={styles.btnSubmit}>Add task</button>
             <button onClick={() => setIsAdding(false)} style={styles.btnCancel}>Cancel</button>
@@ -257,6 +321,23 @@ function TaskPage() {
                       if (e.key === 'Escape') setEditingId(null);
                     }}
                   />
+                  <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      style={styles.inputSmall}
+                    />
+                    <select
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                      style={styles.inputSmall}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
                   <div style={styles.actionButtons}>
                     <button onClick={() => saveEdit(task._id)} style={styles.btnSubmit}>Save</button>
                     <button onClick={() => setEditingId(null)} style={styles.btnCancel}>Cancel</button>
@@ -265,40 +346,62 @@ function TaskPage() {
               ) : (
                 /* NẾU BÌNH THƯỜNG THÌ HIỆN CHỮ VÀ CÁC NÚT HÀNH ĐỘNG */
                 <>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    {/* Nút check tròn (Giờ đã có thể bấm, đổi màu và có dấu tick) */}
-                    <div
-                      onClick={() => toggleComplete(task)}
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "50%",
-                        border: task.completed ? "none" : "1px solid #ccc",
-                        backgroundColor: task.completed ? "#3A924A" : "transparent",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      {task.completed && (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                      )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      {/* Nút check tròn (Giờ đã có thể bấm, đổi màu và có dấu tick) */}
+                      <div
+                        onClick={() => toggleComplete(task)}
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          borderRadius: "50%",
+                          border: task.completed ? "none" : "1px solid #ccc",
+                          backgroundColor: task.completed ? "#3A924A" : "transparent",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0 // Đảm bảo nút tròn không bị méo khi tên dài
+                        }}
+                      >
+                        {task.completed && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Tên công việc (Làm mờ và gạch ngang nếu đã xong) */}
+                      <span style={{
+                        textDecoration: task.completed ? "line-through" : "none",
+                        color: task.completed ? "#aaa" : "#202020",
+                        transition: "all 0.2s"
+                      }}>
+                        {task.title}
+                      </span>
                     </div>
 
-                    {/* Tên công việc (Làm mờ và gạch ngang nếu đã xong) */}
-                    <span style={{
-                      textDecoration: task.completed ? "line-through" : "none",
-                      color: task.completed ? "#aaa" : "#202020",
-                      transition: "all 0.2s"
-                    }}>
-                      {task.title}
-                    </span>
+                    {/* HIỂN THỊ TAG HẠN CHÓT & ƯU TIÊN */}
+                    <div style={{ display: "flex", gap: "12px", marginLeft: "28px", fontSize: "12px", opacity: task.completed ? 0.5 : 1 }}>
+                      {task.priority && (
+                        <span style={{ color: task.priority === "High" ? "#E44332" : task.priority === "Medium" ? "#E29F00" : "#888", fontWeight: "600" }}>
+                          {task.priority}
+                        </span>
+                      )}
+                      {task.deadline && (
+                        <span style={{
+                          color: getDeadlineStatus(task.deadline) === "overdue" ? "#E44332" : getDeadlineStatus(task.deadline) === "urgent" ? "#E29F00" : "#888",
+                          fontWeight: getDeadlineStatus(task.deadline) !== "normal" ? "600" : "normal"
+                        }}>
+                          {new Date(task.deadline).toLocaleDateString("vi-VN")}
+                          {getDeadlineStatus(task.deadline) === "overdue" ? " (Quá hạn)" : ""}
+                          {getDeadlineStatus(task.deadline) === "urgent" ? " (Hôm nay)" : ""}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div style={styles.taskActions}>
+                  <div style={{ display: "flex", gap: "12px", opacity: 0.7, paddingTop: "2px" }}>
                     {/* Nút Sửa (Bút chì) */}
                     <button
                       onClick={() => startEditing(task)}
