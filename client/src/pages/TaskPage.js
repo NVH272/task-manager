@@ -24,6 +24,9 @@ function TaskPage() {
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("Medium");
 
+  const [searchQuery, setSearchQuery] = useState(""); // Lưu từ khóa tìm kiếm
+  const [sortBy, setSortBy] = useState("newest"); // Lưu tiêu chí sắp xếp (mặc định là Mới nhất)
+
   const fetchTasks = async () => {
     try {
       const res = await API.get("/tasks");
@@ -93,6 +96,32 @@ function TaskPage() {
       console.error("Lỗi khi cập nhật trạng thái", error);
     }
   };
+
+  // --- LOGIC TÌM KIẾM VÀ SẮP XẾP ---
+  const displayedTasks = tasks
+    // 1. TÌM KIẾM: Giữ lại những task có chứa từ khóa (không phân biệt hoa/thường)
+    .filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    // 2. SẮP XẾP:
+    .sort((a, b) => {
+      if (sortBy === "priority") {
+        // Quy đổi độ ưu tiên thành điểm: High=3, Medium=2, Low=1
+        const pMap = { High: 3, Medium: 2, Low: 1 };
+        const scoreA = pMap[a.priority] || 1;
+        const scoreB = pMap[b.priority] || 1;
+        return scoreB - scoreA; // Điểm cao (High) xếp trước
+      }
+      else if (sortBy === "deadline") {
+        // Nếu không có hạn chót, đẩy xuống cuối cùng
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(a.deadline) - new Date(b.deadline); // Ngày gần nhất lên trước
+      }
+      else {
+        // newest (Mặc định): Mới tạo xếp lên đầu
+        // Nhờ MongoDB có { timestamps: true } nên ta có thể dùng createdAt
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      }
+    });
 
   useEffect(() => {
     fetchTasks();
@@ -227,6 +256,26 @@ function TaskPage() {
     <div style={styles.container}>
       <h1 style={styles.header}>Today</h1>
 
+      {/* --- THANH CÔNG CỤ: TÌM KIẾM & SẮP XẾP --- */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #eee" }}>
+        <input
+          type="text"
+          placeholder="Tìm kiếm công việc..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ ...styles.input, border: "1px solid #ddd", borderRadius: "4px", padding: "8px 12px", flex: 1 }}
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ddd", outline: "none", cursor: "pointer" }}
+        >
+          <option value="newest">Mới nhất</option>
+          <option value="priority">Ưu tiên cao nhất</option>
+          <option value="deadline">Hạn chót gần nhất</option>
+        </select>
+      </div>
+
       {/* --- NÚT BẬT FORM THÊM TASK --- */}
       {!isAdding ? (
         <button
@@ -298,7 +347,7 @@ function TaskPage() {
         </div>
       ) : (
         <ul style={styles.taskList}>
-          {tasks.map(task => (
+          {displayedTasks.map(task => (
             <li
               key={task._id}
               style={{
