@@ -12,8 +12,10 @@ exports.getTasks = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
+    const filePaths = req.files ? req.files.map(file => file.path) : [];
     const newTask = new Task({
       ...req.body,
+      attachments: filePaths,
       user: req.user.id // Đóng dấu bản quyền cho người tạo
     });
 

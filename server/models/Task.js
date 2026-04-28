@@ -5,6 +5,12 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  description: {
+    type: String
+  },
+  attachments: [{
+    type: String
+  }],
   completed: {
     type: Boolean,
     default: false

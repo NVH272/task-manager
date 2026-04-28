@@ -21,6 +21,9 @@ function TaskPage() {
   const [editingId, setEditingId] = useState(null); // Lưu ID của task đang được sửa
   const [editTitle, setEditTitle] = useState(""); // Lưu nội dung chữ đang gõ
 
+  const [description, setDescription] = useState("");
+  const [attachments, setAttachments] = useState([]);
+
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("Medium");
 
@@ -38,13 +41,27 @@ function TaskPage() {
 
   const addTask = async () => {
     if (!title.trim()) return;
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("deadline", deadline);
+    formData.append("priority", priority);
+
+    // Đính kèm các file
+    for (let i = 0; i < attachments.length; i++) {
+      formData.append("attachments", attachments[i]);
+    }
+
     try {
-      // Gửi kèm deadline và priority khi tạo mới
-      await API.post("/tasks", { title, deadline, priority });
+      // Lưu ý: Phải gửi formData thay vì object { }
+      await API.post("/tasks", formData);
+
+      // Reset form...
       setTitle("");
-      setDeadline(""); // Reset lại ngày
-      setPriority("Medium"); // Reset lại độ ưu tiên
-      setIsAdding(false); // Thêm xong thì đóng form lại cho gọn
+      setDescription("");
+      setAttachments([]);
+      setIsAdding(false);
       fetchTasks();
     } catch (error) {
       console.error("Lỗi khi thêm task", error);
@@ -310,6 +327,19 @@ function TaskPage() {
               if (e.key === 'Escape') setIsAdding(false);
             }}
           />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Thêm mô tả chi tiết..."
+            style={{ ...styles.input, marginTop: "10px", minHeight: "60px" }}
+          />
+
+          <input
+            type="file"
+            multiple // Cho phép chọn nhiều file
+            onChange={(e) => setAttachments(e.target.files)}
+            style={{ marginTop: "10px", fontSize: "12px" }}
+          />
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
             <input
               type="date"
@@ -417,6 +447,24 @@ function TaskPage() {
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                           </svg>
+                        )}
+                        {/* Hiển thị Description nếu có */}
+                        {task.description && (
+                          <p style={{ marginLeft: "28px", fontSize: "13px", color: "#555", margin: "4px 0" }}>
+                            {task.description}
+                          </p>
+                        )}
+
+                        {/* Hiển thị danh sách Attachment nếu có */}
+                        {task.attachments && task.attachments.length > 0 && (
+                          <div style={{ marginLeft: "28px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            {task.attachments.map((file, index) => (
+                              <a key={index} href={`http://localhost:5000/${file}`} target="_blank" rel="noreferrer"
+                                style={{ fontSize: "11px", color: "#3A924A", textDecoration: "none", border: "1px solid #3A924A", padding: "2px 6px", borderRadius: "4px" }}>
+                                File {index + 1}
+                              </a>
+                            ))}
+                          </div>
                         )}
                       </div>
 
