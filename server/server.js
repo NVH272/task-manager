@@ -2,12 +2,15 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
+const path = require("path");
 
 const app = express();
 
 // middleware
 app.use(cors());
 app.use(express.json());
+// Cấp quyền cho client truy cập vào thư mục 'uploads'
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /*
 |--------------------------------------------------------------------------
