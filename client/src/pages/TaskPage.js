@@ -78,27 +78,47 @@ function TaskPage() {
   };
 
   const startEditing = (task) => {
-    setEditingId(task._id); // Bật chế độ sửa cho task này
-    setEditTitle(task.title); // Đổ chữ cũ vào ô input
-    // Lấy ngày chuẩn (YYYY-MM-DD) để đổ vào input type="date"
+    setEditingId(task._id);
+    setEditTitle(task.title);
+    // Lấy ngày chuẩn
     const dateStr = task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : "";
     setDeadline(dateStr);
     setPriority(task.priority || "Medium");
+
+    setDescription(task.description || ""); // Đổ mô tả cũ ra
+    setAttachments([]); // Reset mảng file để chuẩn bị nhận file mới nếu muốn
   };
 
   const saveEdit = async (id) => {
-    // Nếu xóa hết chữ mà bấm lưu thì tự động hủy sửa
     if (!editTitle.trim()) {
       setEditingId(null);
       return;
     }
+
+    // --- SỬ DỤNG FORMDATA THAY VÌ OBJECT THƯỜNG ---
+    const formData = new FormData();
+    formData.append("title", editTitle);
+    formData.append("description", description);
+    formData.append("deadline", deadline);
+    formData.append("priority", priority);
+
+    // Đính kèm các file (nếu có chọn file mới)
+    for (let i = 0; i < attachments.length; i++) {
+      formData.append("attachments", attachments[i]);
+    }
+
     try {
-      // Gửi cả ngày và ưu tiên lên khi sửa
-      await API.put(`/tasks/${id}`, { title: editTitle, deadline, priority });
+      // Gửi thẳng formData, Axios sẽ tự động lo phần Header + Boundary
+      await API.put(`/tasks/${id}`, formData);
+
       setEditingId(null); // Tắt form sửa
+
       // Reset lại các trường tạm
       setDeadline("");
       setPriority("Medium");
+      setDescription("");
+      setAttachments([]);
+
       fetchTasks(); // Tải lại danh sách
     } catch (error) {
       console.error("Lỗi khi sửa task", error);
@@ -390,6 +410,7 @@ function TaskPage() {
               {/* NẾU ĐANG SỬA THÌ HIỆN FORM NÀY */}
               {editingId === task._id ? (
                 <div style={{ ...styles.addForm, width: "100%", marginBottom: 0, marginTop: "10px" }}>
+                  {/* Ô nhập Tên */}
                   <input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
@@ -400,6 +421,24 @@ function TaskPage() {
                       if (e.key === 'Escape') setEditingId(null);
                     }}
                   />
+
+                  {/* Ô nhập Mô tả */}
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Thêm mô tả chi tiết..."
+                    style={{ ...styles.input, marginTop: "10px", minHeight: "60px" }}
+                  />
+
+                  {/* Nút chọn File */}
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setAttachments(e.target.files)}
+                    style={{ marginTop: "10px", fontSize: "12px", width: "100%" }}
+                  />
+
+                  {/* Thanh chọn Ngày và Ưu tiên */}
                   <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                     <input
                       type="date"
@@ -417,6 +456,8 @@ function TaskPage() {
                       <option value="High">High</option>
                     </select>
                   </div>
+
+                  {/* Nút Save / Cancel */}
                   <div style={styles.actionButtons}>
                     <button onClick={() => saveEdit(task._id)} style={styles.btnSubmit}>Save</button>
                     <button onClick={() => setEditingId(null)} style={styles.btnCancel}>Cancel</button>

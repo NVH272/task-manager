@@ -28,15 +28,23 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    // Tìm task theo ID và ID của user, sau đó cập nhật tiêu đề mới
+    // 1. Gom các dữ liệu chữ (title, description, deadline, priority) vào 1 cục
+    let updateData = { ...req.body };
+
+    // 2. Nếu người dùng có chọn file mới để upload lên thì cập nhật lại mảng attachments
+    if (req.files && req.files.length > 0) {
+      updateData.attachments = req.files.map(file => file.path);
+    }
+
+    // 3. Tiến hành lưu vào database
     const task = await Task.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id }, // Điều kiện tìm kiếm
-      { $set: req.body }, // Dữ liệu cập nhật
-      { new: true } // Trả về dữ liệu mới sau khi sửa
+      { _id: req.params.id, user: req.user.id },
+      { $set: updateData },
+      { new: true }
     );
 
     if (!task) {
-      return res.status(404).json({ message: "Không tìm thấy công việc hoặc bạn không có quyền sửa!" });
+      return res.status(404).json({ message: "Không tìm thấy công việc!" });
     }
 
     res.status(200).json(task);
