@@ -3,6 +3,7 @@ import API from "../services/api";
 import TaskToolbar from "../components/Task/TaskToolbar";
 import TaskItem from "../components/Task/TaskItem";
 import TaskAddForm from "../components/Task/TaskAddForm";
+import TaskDetailModal from "../components/Task/TaskDetailModal";
 
 function TaskPage() {
   const [tasks, setTasks] = useState([]);
@@ -20,6 +21,8 @@ function TaskPage() {
 
   const [searchQuery, setSearchQuery] = useState(""); // Lưu từ khóa tìm kiếm
   const [sortBy, setSortBy] = useState("newest"); // Lưu tiêu chí sắp xếp (mặc định là Mới nhất)
+
+  const [selectedTask, setSelectedTask] = useState(null); // Lưu task đang được xem chi tiết
 
   const fetchTasks = async () => {
     try {
@@ -331,10 +334,16 @@ function TaskPage() {
               attachments={attachments} setAttachments={setAttachments}
               saveEdit={saveEdit} startEditing={startEditing}
               toggleComplete={toggleComplete} deleteTask={deleteTask}
+              onViewDetails={setSelectedTask}
             />
           ))}
         </ul>
       )}
+      <TaskDetailModal
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        toggleComplete={toggleComplete}
+      />
     </div>
   );
 }

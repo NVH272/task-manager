@@ -30,7 +30,8 @@ function TaskItem({
     saveEdit,
     startEditing,
     toggleComplete,
-    deleteTask
+    deleteTask,
+    onViewDetails
 }) {
     const isEditing = editingId === task._id;
 
@@ -94,10 +95,16 @@ function TaskItem({
             ) : (
                 /* --- GIAO DIỆN LÚC BÌNH THƯỜNG --- */
                 <>
-                    <div style={{ display: "flex", gap: "14px", flex: 1 }}>
+                    <div
+                        onClick={() => onViewDetails(task)}
+                        style={{ display: "flex", gap: "14px", flex: 1, cursor: "pointer" }}
+                    >
                         {/* 1. Nút check tròn (Đẩy nhẹ xuống 2px để cân bằng với chữ) */}
                         <div
-                            onClick={() => toggleComplete(task)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleComplete(task);
+                            }}
                             style={{
                                 width: "18px",
                                 height: "18px",
@@ -187,7 +194,10 @@ function TaskItem({
                     {/* 3. Khối Nút Hành Động (Sửa / Xóa) */}
                     <div style={{ display: "flex", gap: "8px", opacity: 0.6, paddingTop: "2px" }}>
                         <button
-                            onClick={() => startEditing(task)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                startEditing(task)
+                            }}
                             style={styles.iconBtn}
                             title="Sửa"
                             onMouseOver={(e) => { e.currentTarget.style.color = "#3A924A"; e.currentTarget.style.transform = "scale(1.1)"; }}
@@ -196,7 +206,10 @@ function TaskItem({
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         <button
-                            onClick={() => deleteTask(task._id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                deleteTask(task._id)
+                            }}
                             style={styles.iconBtn}
                             title="Xóa"
                             onMouseOver={(e) => { e.currentTarget.style.color = "#E44332"; e.currentTarget.style.transform = "scale(1.1)"; }}
