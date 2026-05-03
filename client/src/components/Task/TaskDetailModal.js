@@ -80,130 +80,140 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
 
                     {/* CỘT TRÁI */}
                     <div style={styles.leftPane}>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "20px" }}>
-                            {/* Checkbox */}
-                            <div
-                                onClick={() => editingField === null && toggleComplete(task)}
-                                style={{
-                                    width: "20px", height: "20px", borderRadius: "50%",
-                                    border: task.completed ? "none" : "2px solid #E29F00",
-                                    backgroundColor: task.completed ? "#E29F00" : "transparent",
-                                    cursor: editingField ? "not-allowed" : "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center", marginTop: "4px",
-                                    opacity: editingField ? 0.5 : 1
-                                }}
-                            >
-                                {task.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+
+                        {/* --- KHU VỰC CUỘN ĐƯỢC (Tên, Checkbox, Mô tả, File) --- */}
+                        <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "20px" }}>
+                                {/* Checkbox */}
+                                <div
+                                    onClick={() => editingField === null && toggleComplete(task)}
+                                    style={{
+                                        width: "20px", height: "20px", borderRadius: "50%",
+                                        border: task.completed ? "none" : "2px solid #E29F00",
+                                        backgroundColor: task.completed ? "#E29F00" : "transparent",
+                                        cursor: editingField ? "not-allowed" : "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center", marginTop: "4px",
+                                        opacity: editingField ? 0.5 : 1
+                                    }}
+                                >
+                                    {task.completed && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                </div>
+
+                                <div style={{ flex: 1 }}>
+                                    {/* --- KHỐI INLINE EDITING: TÊN & MÔ TẢ --- */}
+                                    {editingField === 'text' ? (
+                                        <div style={{ border: "1px solid #ccc", borderRadius: "8px", overflow: "hidden", padding: "10px", backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                                            <input
+                                                value={editTitle}
+                                                onChange={(e) => setEditTitle(e.target.value)}
+                                                style={{ ...styles.input, fontSize: "20px", fontWeight: "600", width: "100%", marginBottom: "8px" }}
+                                                autoFocus
+                                                placeholder="Tên công việc"
+                                            />
+                                            <textarea
+                                                value={editDesc}
+                                                onChange={(e) => setEditDesc(e.target.value)}
+                                                placeholder="Thêm mô tả chi tiết..."
+                                                style={{ ...styles.input, width: "100%", minHeight: "80px", fontSize: "14px", color: "#555" }}
+                                            />
+                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+                                                <button onClick={() => setEditingField(null)} style={styles.btnCancel}>Cancel</button>
+                                                <button
+                                                    onClick={() => handleInlineSave({ title: editTitle, description: editDesc })}
+                                                    style={styles.btnSubmit}
+                                                    disabled={!editTitle.trim()} // Khóa nút nếu xóa hết tên
+                                                >
+                                                    Save
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            onClick={() => {
+                                                setEditTitle(task.title);
+                                                setEditDesc(task.description || "");
+                                                setEditingField('text');
+                                            }}
+                                            style={{ cursor: "text", padding: "4px", margin: "-4px", borderRadius: "6px", transition: "background-color 0.2s" }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9f9f9"}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                        >
+                                            <h2 style={{ margin: 0, fontSize: "22px", color: "#202020", textDecoration: task.completed ? "line-through" : "none", opacity: task.completed ? 0.6 : 1 }}>
+                                                {task.title}
+                                            </h2>
+                                            <div style={{ marginTop: "12px", color: task.description ? "#555" : "#aaa", fontSize: "14px", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                                                {task.description || "Thêm mô tả chi tiết..."}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            <div style={{ flex: 1 }}>
-                                {/* --- KHỐI INLINE EDITING: TÊN & MÔ TẢ --- */}
-                                {editingField === 'text' ? (
-                                    <div style={{ border: "1px solid #ccc", borderRadius: "8px", overflow: "hidden", padding: "10px", backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                                        <input
-                                            value={editTitle}
-                                            onChange={(e) => setEditTitle(e.target.value)}
-                                            style={{ ...styles.input, fontSize: "20px", fontWeight: "600", width: "100%", marginBottom: "8px" }}
-                                            autoFocus
-                                            placeholder="Tên công việc"
-                                        />
-                                        <textarea
-                                            value={editDesc}
-                                            onChange={(e) => setEditDesc(e.target.value)}
-                                            placeholder="Thêm mô tả chi tiết..."
-                                            style={{ ...styles.input, width: "100%", minHeight: "80px", fontSize: "14px", color: "#555" }}
-                                        />
-                                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
-                                            <button onClick={() => setEditingField(null)} style={styles.btnCancel}>Cancel</button>
-                                            <button
-                                                onClick={() => handleInlineSave({ title: editTitle, description: editDesc })}
-                                                style={styles.btnSubmit}
-                                                disabled={!editTitle.trim()} // Khóa nút nếu xóa hết tên
-                                            >
-                                                Save
-                                            </button>
+                            {/* HIỂN THỊ ATTACHMENTS */}
+                            <div style={{ marginTop: "40px", borderTop: "1px solid #f0f0f0", paddingTop: "20px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", fontSize: "14px", marginBottom: "20px", color: "#202020" }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                    Đính kèm ({task.attachments ? task.attachments.length : 0})
+                                </div>
+
+                                {task.attachments && task.attachments.map((file, idx) => {
+                                    const isImage = file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                                    const fileUrl = `http://localhost:5000/${file}`;
+
+                                    return (
+                                        <div key={idx} style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                                            <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>U</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Bạn <span style={{ color: "#aaa", fontWeight: "normal", fontSize: "11px", marginLeft: "8px" }}>Tải lên lúc tạo</span></div>
+                                                {/* NẾU LÀ ẢNH THÌ HIỆN ẢNH, NẾU KHÔNG THÌ HIỆN BOX TÊN FILE */}
+                                                {isImage ? (
+                                                    <img src={fileUrl} alt="attachment" style={{ maxWidth: "300px", borderRadius: "8px", border: "1px solid #eee" }} />
+                                                ) : (
+                                                    <a href={fileUrl} target="_blank" rel="noreferrer" style={{
+                                                        display: "inline-flex", alignItems: "center", gap: "10px",
+                                                        padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "4px",
+                                                        textDecoration: "none", color: "#666", backgroundColor: "#fff", maxWidth: "100%"
+                                                    }}>
+                                                        {/* Icon File màu xanh nhạt */}
+                                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+
+                                                        {/* Tên file thật (có cắt gọn nếu tên quá dài) */}
+                                                        <span style={{ fontSize: "14px", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                            {getOriginalFileName(file)}
+                                                        </span>
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={() => {
-                                            setEditTitle(task.title);
-                                            setEditDesc(task.description || "");
-                                            setEditingField('text');
-                                        }}
-                                        style={{ cursor: "text", padding: "4px", margin: "-4px", borderRadius: "6px", transition: "background-color 0.2s" }}
-                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9f9f9"}
-                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                                    >
-                                        <h2 style={{ margin: 0, fontSize: "22px", color: "#202020", textDecoration: task.completed ? "line-through" : "none", opacity: task.completed ? 0.6 : 1 }}>
-                                            {task.title}
-                                        </h2>
-                                        <div style={{ marginTop: "12px", color: task.description ? "#555" : "#aaa", fontSize: "14px", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-                                            {task.description || "Thêm mô tả chi tiết..."}
-                                        </div>
-                                    </div>
-                                )}
+                                    );
+                                })}
+                            </div>
+                        </div> {/* KẾT THÚC KHU VỰC CUỘN ĐƯỢC */}
+
+                        {/* --- KHU VỰC GHIM CỐ ĐỊNH (Nhập Comment) --- */}
+                        <div style={{ padding: "16px 32px", borderTop: "1px solid #ebebeb", backgroundColor: "#fff", flexShrink: 0 }}>
+                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                {/* Avatar */}
+                                <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>
+                                    U
+                                </div>
+
+                                {/* Ô nhập liệu bo tròn (Pill shape) */}
+                                <div style={{ flex: 1, display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: "24px", padding: "10px 16px", backgroundColor: "#fff" }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Comment"
+                                        style={{ border: "none", outline: "none", flex: 1, fontSize: "14px", color: "#333", backgroundColor: "transparent" }}
+                                    />
+                                    {/* Icon kẹp ghim (Attachment) */}
+                                    <button style={{ background: "none", border: "none", cursor: "not-allowed", color: "#888", display: "flex", alignItems: "center", padding: 0 }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* HIỂN THỊ ATTACHMENTS */}
-                        <div style={{ marginTop: "40px", borderTop: "1px solid #f0f0f0", paddingTop: "20px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", fontSize: "14px", marginBottom: "20px", color: "#202020" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                                Đính kèm ({task.attachments ? task.attachments.length : 0})
-                            </div>
-
-                            {task.attachments && task.attachments.map((file, idx) => {
-                                const isImage = file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
-                                const fileUrl = `http://localhost:5000/${file}`;
-
-                                return (
-                                    <div key={idx} style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-                                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold" }}>U</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Bạn <span style={{ color: "#aaa", fontWeight: "normal", fontSize: "11px", marginLeft: "8px" }}>Tải lên lúc tạo</span></div>
-                                            {/* NẾU LÀ ẢNH THÌ HIỆN ẢNH, NẾU KHÔNG THÌ HIỆN BOX TÊN FILE */}
-                                            {isImage ? (
-                                                <img src={fileUrl} alt="attachment" style={{ maxWidth: "300px", borderRadius: "8px", border: "1px solid #eee" }} />
-                                            ) : (
-                                                <a href={fileUrl} target="_blank" rel="noreferrer" style={{
-                                                    display: "inline-flex", alignItems: "center", gap: "10px",
-                                                    padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "4px",
-                                                    textDecoration: "none", color: "#666", backgroundColor: "#fff", maxWidth: "100%"
-                                                }}>
-                                                    {/* Icon File màu xanh nhạt */}
-                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-
-                                                    {/* Tên file thật (có cắt gọn nếu tên quá dài) */}
-                                                    <span style={{ fontSize: "14px", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                        {getOriginalFileName(file)}
-                                                    </span>
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <div style={{ display: "flex", gap: "12px", marginTop: "30px", alignItems: "center", paddingBottom: "20px" }}>
-                            {/* Avatar */}
-                            <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>
-                                U
-                            </div>
-
-                            {/* Ô nhập liệu bo tròn (Pill shape) */}
-                            <div style={{ flex: 1, display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: "24px", padding: "10px 16px", backgroundColor: "#fff" }}>
-                                <input
-                                    type="text"
-                                    placeholder="Comment"
-                                    style={{ border: "none", outline: "none", flex: 1, fontSize: "14px", color: "#333", backgroundColor: "transparent" }}
-                                />
-                                {/* Icon kẹp ghim (Attachment) */}
-                                <button style={{ background: "none", border: "none", cursor: "not-allowed", color: "#888", display: "flex", alignItems: "center", padding: 0 }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
                     {/* CỘT PHẢI */}
@@ -307,8 +317,11 @@ const styles = {
         display: "flex", flex: 1, overflow: "hidden"
     },
     leftPane: {
-        flex: 2, padding: "24px 32px", overflowY: "auto",
-        backgroundColor: "#fff"
+        flex: 2,
+        display: "flex",
+        flexDirection: "column", // Ép thành cột từ trên xuống
+        backgroundColor: "#fff",
+        overflow: "hidden"
     },
     rightPane: {
         flex: 1, backgroundColor: "#fafafa", borderLeft: "1px solid #f0f0f0",
