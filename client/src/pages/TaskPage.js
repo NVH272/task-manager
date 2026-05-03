@@ -119,6 +119,21 @@ function TaskPage() {
     }
   };
 
+  const updateTaskFromModal = async (id, formData) => {
+    try {
+      // Gọi API cập nhật
+      const res = await API.put(`/tasks/${id}`, formData);
+
+      // Tải lại danh sách bên ngoài
+      fetchTasks();
+
+      // Cập nhật luôn cục dữ liệu của Modal để nó hiển thị nội dung mới nhất ngay lập tức
+      setSelectedTask(res.data);
+    } catch (error) {
+      console.error("Lỗi khi sửa từ Modal", error);
+    }
+  };
+
   const toggleComplete = async (task) => {
     try {
       await API.put(`/tasks/${task._id}`, { completed: !task.completed });
@@ -343,6 +358,7 @@ function TaskPage() {
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         toggleComplete={toggleComplete}
+        onUpdate={updateTaskFromModal}
       />
     </div>
   );
