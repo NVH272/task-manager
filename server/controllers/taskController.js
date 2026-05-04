@@ -28,12 +28,21 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    // 1. Gom các dữ liệu chữ (title, description, deadline, priority) vào 1 cục
     let updateData = { ...req.body };
 
-    // 2. Nếu người dùng có chọn file mới để upload lên thì cập nhật lại mảng attachments
+    // 1. Hứng danh sách các file CŨ mà người dùng muốn GIỮ LẠI
+    let retained = req.body.retainedAttachments || [];
+    // Nếu chỉ có 1 file, FormData sẽ gửi dạng chuỗi (String), ta cần ép nó về mảng (Array)
+    if (typeof retained === 'string') {
+      retained = [retained];
+    }
+
+    // 2. Xử lý gộp file cũ và file mới tải lên
     if (req.files && req.files.length > 0) {
-      updateData.attachments = req.files.map(file => file.path);
+      const newFilePaths = req.files.map(file => file.path);
+      updateData.attachments = [...retained, ...newFilePaths]; // Nối cũ và mới
+    } else {
+      updateData.attachments = retained; // Chỉ lưu những file cũ chưa bị xóa
     }
 
     // 3. Tiến hành lưu vào database
@@ -43,11 +52,9 @@ exports.updateTask = async (req, res) => {
       { new: true }
     );
 
-    if (!task) {
-      return res.status(404).json({ message: "Không tìm thấy công việc!" });
-    }
-
+    if (!task) return res.status(404).json({ message: "Không tìm thấy công việc!" });
     res.status(200).json(task);
+
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi cập nhật công việc" });
   }

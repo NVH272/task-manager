@@ -15,6 +15,7 @@ function TaskPage() {
 
   const [description, setDescription] = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [retainedAttachments, setRetainedAttachments] = useState([]);
 
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("Medium");
@@ -81,6 +82,7 @@ function TaskPage() {
 
     setDescription(task.description || ""); // Đổ mô tả cũ ra
     setAttachments([]); // Reset mảng file để chuẩn bị nhận file mới nếu muốn
+    setRetainedAttachments(task.attachments || []);
   };
 
   const saveEdit = async (id) => {
@@ -96,7 +98,12 @@ function TaskPage() {
     formData.append("deadline", deadline);
     formData.append("priority", priority);
 
-    // Đính kèm các file (nếu có chọn file mới)
+    // 1. Gửi file cũ ĐƯỢC GIỮ LẠI
+    retainedAttachments.forEach(file => {
+      formData.append("retainedAttachments", file);
+    });
+
+    // 2. Gửi file MỚI (giữ nguyên vòng lặp cũ của bạn)
     for (let i = 0; i < attachments.length; i++) {
       formData.append("attachments", attachments[i]);
     }
@@ -302,15 +309,6 @@ function TaskPage() {
     <div style={styles.container}>
       <h1 style={styles.header}>Today</h1>
 
-      {/* TaskToolbar */}
-      <TaskToolbar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        styles={styles}
-      />
-
       {/* TaskAddForm */}
       <TaskAddForm
         title={title} setTitle={setTitle}
@@ -350,6 +348,8 @@ function TaskPage() {
               saveEdit={saveEdit} startEditing={startEditing}
               toggleComplete={toggleComplete} deleteTask={deleteTask}
               onViewDetails={setSelectedTask}
+              retainedAttachments={retainedAttachments}
+              setRetainedAttachments={setRetainedAttachments}
             />
           ))}
         </ul>

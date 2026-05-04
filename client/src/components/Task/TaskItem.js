@@ -31,7 +31,9 @@ function TaskItem({
     startEditing,
     toggleComplete,
     deleteTask,
-    onViewDetails
+    onViewDetails,
+    retainedAttachments,
+    setRetainedAttachments
 }) {
     const isEditing = editingId === task._id;
 
@@ -47,49 +49,154 @@ function TaskItem({
         >
             {/* --- FORM KHI ĐANG SỬA --- */}
             {isEditing ? (
-                <div style={{ ...styles.addForm, width: "100%", marginBottom: 0, marginTop: "10px", backgroundColor: "#fafafa" }}>
+                <div style={{
+                    width: "100%", padding: "16px", marginTop: "8px", marginBottom: "12px",
+                    backgroundColor: "#fff", borderRadius: "10px",
+                    border: "1px solid #e2e8f0", boxShadow: "0 8px 20px rgba(0, 0, 0, 0.06)",
+                    display: "flex", flexDirection: "column", gap: "16px" // Dùng gap để tạo khoảng cách đều đặn
+                }}>
+
+                    {/* Ô nhập Tên Task (Kiểu viền dưới tinh tế) */}
                     <input
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        style={{ ...styles.input, fontWeight: "600", fontSize: "15px" }}
+                        placeholder="Tên công việc..."
+                        style={{
+                            width: "100%", fontSize: "18px", fontWeight: "600", color: "#1e293b",
+                            border: "none", borderBottom: "2px solid #e2e8f0", padding: "4px 0",
+                            outline: "none", transition: "border-color 0.2s", backgroundColor: "transparent"
+                        }}
                         autoFocus
+                        onFocus={(e) => e.target.style.borderBottom = "2px solid #3A924A"}
+                        onBlur={(e) => e.target.style.borderBottom = "2px solid #e2e8f0"}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') saveEdit(task._id);
                             if (e.key === 'Escape') setEditingId(null);
                         }}
                     />
+
+                    {/* Ô nhập Mô tả */}
                     <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Thêm mô tả chi tiết..."
-                        style={{ ...styles.input, marginTop: "8px", minHeight: "60px", fontSize: "13px", lineHeight: "1.4" }}
+                        style={{
+                            width: "100%", minHeight: "80px", fontSize: "14px", color: "#475569", lineHeight: "1.5",
+                            padding: "12px", border: "1px solid #e2e8f0", borderRadius: "8px",
+                            outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
+                            transition: "border-color 0.2s"
+                        }}
+                        onFocus={(e) => e.target.style.border = "1px solid #3A924A"}
+                        onBlur={(e) => e.target.style.border = "1px solid #e2e8f0"}
                     />
-                    <input
-                        type="file"
-                        multiple
-                        onChange={(e) => setAttachments(e.target.files)}
-                        style={{ marginTop: "12px", fontSize: "12px", width: "100%" }}
-                    />
-                    <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+
+                    {/* Khối quản lý File Đính Kèm (Gộp file cũ và nút chọn file mới vào 1 khu vực) */}
+                    <div style={{ backgroundColor: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                        <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>
+                            Tệp đính kèm
+                        </div>
+
+                        {/* --- DANH SÁCH FILE CŨ --- */}
+                        {retainedAttachments && retainedAttachments.length > 0 && (
+                            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+                                {retainedAttachments.map((file, idx) => {
+                                    const isImage = file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                                    const fileUrl = `http://localhost:5000/${file}`;
+                                    const originalName = file.split(/[/\\]/).pop().replace(/^\d+-\d+-/, '');
+
+                                    return (
+                                        <div key={idx} style={{ position: "relative", display: "inline-block" }}>
+                                            {/* Nút Xóa File */}
+                                            <div
+                                                onClick={() => {
+                                                    const newRetained = retainedAttachments.filter((_, i) => i !== idx);
+                                                    setRetainedAttachments(newRetained);
+                                                }}
+                                                style={{
+                                                    position: "absolute", top: "-6px", right: "-8px",
+                                                    width: "20px", height: "20px", borderRadius: "50%",
+                                                    backgroundColor: "#6e6e6e", color: "white",
+                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                    cursor: "pointer", zIndex: 10, transition: "transform 0.1s, background 0.2s",
+                                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                                                }}
+                                                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = "#3f3f3f"; e.currentTarget.style.transform = "scale(1.1)"; }}
+                                                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "#6e6e6e"; e.currentTarget.style.transform = "scale(1)"; }}
+                                                title="Xóa tệp này"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </div>
+
+                                            {/* Giao diện Ảnh hoặc Tệp */}
+                                            {isImage ? (
+                                                <img src={fileUrl} alt="attachment" style={{ width: "56px", height: "56px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                            ) : (
+                                                <div style={{ padding: "0 10px", backgroundColor: "#fff", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "12px", color: "#475569", maxWidth: "120px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: "6px", height: "56px", boxSizing: "border-box" }} title={originalName}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3A924A" strokeWidth="2" flexShrink={0}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{originalName}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Nút chọn File Mới */}
                         <input
-                            type="date"
-                            value={deadline}
-                            onChange={(e) => setDeadline(e.target.value)}
-                            style={styles.inputSmall}
+                            type="file"
+                            multiple
+                            onChange={(e) => setAttachments(e.target.files)}
+                            style={{ fontSize: "13px", color: "#64748b", cursor: "pointer" }}
                         />
-                        <select
-                            value={priority}
-                            onChange={(e) => setPriority(e.target.value)}
-                            style={styles.inputSmall}
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
                     </div>
-                    <div style={{ ...styles.actionButtons, marginTop: "16px" }}>
-                        <button onClick={() => saveEdit(task._id)} style={styles.btnSubmit}>Lưu</button>
-                        <button onClick={() => setEditingId(null)} style={styles.btnCancel}>Hủy</button>
+
+                    {/* Thanh Metadata (Ngày & Ưu tiên) */}
+                    <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                        {/* Box Ngày */}
+                        <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "6px 10px", backgroundColor: "#f8fafc", transition: "border-color 0.2s" }} onFocus={(e) => e.currentTarget.style.border = "1px solid #3A924A"} onBlur={(e) => e.currentTarget.style.border = "1px solid #e2e8f0"}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3A924A" strokeWidth="2" style={{ marginRight: "8px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <input
+                                type="date"
+                                value={deadline}
+                                onChange={(e) => setDeadline(e.target.value)}
+                                style={{ border: "none", outline: "none", backgroundColor: "transparent", fontSize: "13px", color: "#334155", cursor: "pointer", fontFamily: "inherit" }}
+                            />
+                        </div>
+
+                        {/* Box Ưu tiên */}
+                        <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "6px 10px", backgroundColor: "#f8fafc", transition: "border-color 0.2s" }} onFocus={(e) => e.currentTarget.style.border = "1px solid #3A924A"} onBlur={(e) => e.currentTarget.style.border = "1px solid #e2e8f0"}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill={priority === "High" ? "#ef4444" : priority === "Medium" ? "#f59e0b" : "#3b82f6"} stroke="none" style={{ marginRight: "8px" }}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15" stroke="currentColor" strokeWidth="2"></line></svg>
+                            <select
+                                value={priority}
+                                onChange={(e) => setPriority(e.target.value)}
+                                style={{ border: "none", outline: "none", backgroundColor: "transparent", fontSize: "13px", color: "#334155", cursor: "pointer", fontFamily: "inherit" }}
+                            >
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Dải Nút Hành Động (Góc Phải) */}
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                        <button
+                            onClick={() => setEditingId(null)}
+                            style={{ padding: "8px 16px", border: "none", backgroundColor: "transparent", color: "#64748b", fontWeight: "600", fontSize: "14px", borderRadius: "6px", cursor: "pointer", transition: "background 0.2s" }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            onClick={() => saveEdit(task._id)}
+                            style={{ padding: "8px 24px", border: "none", backgroundColor: "#3A924A", color: "#fff", fontWeight: "600", fontSize: "14px", borderRadius: "6px", cursor: "pointer", boxShadow: "0 2px 4px rgba(58, 146, 74, 0.25)", transition: "background 0.2s" }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#2d7339"}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#3A924A"}
+                        >
+                            Lưu
+                        </button>
                     </div>
                 </div>
             ) : (

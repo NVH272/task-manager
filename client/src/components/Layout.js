@@ -1,7 +1,13 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
+import TaskToolbar from "../components/Task/TaskToolbar";
 
 function Layout() {
+  const location = useLocation();
+  const isTaskPage = location.pathname === "/tasks";
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     window.location.href = "/";
@@ -163,9 +169,6 @@ function Layout() {
       display: "flex",
       gap: "10px",
     },
-    // ... (Giữ nguyên các style cũ của bạn từ layout đến legalLinks)
-
-    // --- THÊM CÁC STYLE NÀY CHO DROPDOWN ---
     avatarContainer: {
       position: "relative",
       display: "flex",
@@ -216,60 +219,42 @@ function Layout() {
     <div style={styles.layout}>
       {/* --- HEADER --- */}
       <header style={styles.header}>
-        {/* Đã sửa thẻ <a> thành <Link> để tối ưu React */}
+        {/* CỘT TRÁI: LOGO */}
         <Link to="/" style={styles.headerLeft}>
-          <img
-            src="/images/logo.png"
-            alt="VHTask Logo"
-            style={{ width: "28px", height: "28px", borderRadius: "6px" }}
-          />
+          <img src="/images/logo.png" alt="VHTask Logo" style={{ width: "28px", height: "28px", borderRadius: "6px" }} />
           <h1 style={styles.logoText}>VHTask</h1>
         </Link>
 
+        {/* 4. CỘT GIỮA: TOOLBAR TÌM KIẾM (Chỉ hiện khi đã đăng nhập và đang mở trang My Tasks) */}
+        {isLoggedIn && isTaskPage && (
+          <div style={styles.headerCenter}>
+            <TaskToolbar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
+          </div>
+        )}
+
+        {/* CỘT PHẢI: NAV/AVATAR */}
         <nav style={styles.headerRight}>
           <div style={styles.divider}></div>
           {!isLoggedIn ? (
             <>
               <Link to="/login" style={styles.navLink}>Log in</Link>
-              <Link
-                to="/register"
-                style={styles.primaryBtn}
-                onMouseOver={(e) => e.target.style.opacity = "0.85"}
-                onMouseOut={(e) => e.target.style.opacity = "1"}
-              >
-                Start for free
-              </Link>
+              <Link to="/register" style={styles.primaryBtn} onMouseOver={(e) => e.target.style.opacity = "0.85"} onMouseOut={(e) => e.target.style.opacity = "1"}>Start for free</Link>
             </>
           ) : (
             <>
               <Link to="/tasks" style={styles.navLink}>My Tasks</Link>
               <div style={styles.avatarContainer} ref={dropdownRef}>
-                <img
-                  src="https://via.placeholder.com/150" // Mặc định hiển thị ảnh placeholder, bạn có thể thay bằng URL thật sau
-                  alt="Avatar"
-                  style={styles.avatarImg}
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                />
-
+                <img src="https://via.placeholder.com/150" alt="Avatar" style={styles.avatarImg} onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
                 {isDropdownOpen && (
                   <div style={styles.dropdownMenu}>
-                    <Link
-                      to="/account"
-                      style={styles.dropdownItem}
-                      onClick={() => setIsDropdownOpen(false)} // Đóng menu khi bấm vào link
-                    >
-                      Account
-                    </Link>
+                    <Link to="/account" style={styles.dropdownItem} onClick={() => setIsDropdownOpen(false)}>Account</Link>
                     <div style={styles.dropdownDivider}></div>
-                    <button
-                      style={{ ...styles.dropdownItem, color: "#d93025" }} // Highlight đỏ cho nút Logout
-                      onClick={() => {
-                        setIsDropdownOpen(false); // Đóng menu trước
-                        handleLogout();           // Chạy hàm logout của bạn
-                      }}
-                    >
-                      Log out
-                    </button>
+                    <button style={{ ...styles.dropdownItem, color: "#d93025" }} onClick={() => { setIsDropdownOpen(false); handleLogout(); }}>Log out</button>
                   </div>
                 )}
               </div>
@@ -280,7 +265,7 @@ function Layout() {
 
       {/* --- PHẦN NHÚNG NỘI DUNG (MAIN) --- */}
       <main style={styles.mainContent}>
-        <Outlet />
+        <Outlet context={{ searchQuery, sortBy }} />
       </main>
 
       {/* --- FOOTER --- */}
