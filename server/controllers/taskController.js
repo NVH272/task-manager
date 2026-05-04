@@ -60,6 +60,27 @@ exports.updateTask = async (req, res) => {
   }
 };
 
+exports.addComment = async (req, res) => {
+  try {
+    const { text } = req.body;
+    // Hứng mảng file do Multer đẩy lên
+    const filePaths = req.files ? req.files.map(file => file.path) : [];
+
+    // Tìm task và nhét (push) comment mới vào mảng comments
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id },
+      { $push: { comments: { text: text, attachments: filePaths } } },
+      { new: true } // Trả về task mới nhất sau khi update
+    );
+
+    if (!task) return res.status(404).json({ message: "Không tìm thấy công việc" });
+
+    res.status(200).json(task);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi thêm comment" });
+  }
+};
+
 exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findOneAndDelete({

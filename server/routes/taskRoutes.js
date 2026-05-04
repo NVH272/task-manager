@@ -6,7 +6,8 @@ const {
   getTasks,
   createTask,
   updateTask,
-  deleteTask
+  deleteTask,
+  addComment
 } = require("../controllers/taskController");
 
 const multer = require("multer");
@@ -34,5 +35,6 @@ router.get("/", auth, getTasks);
 router.post("/", auth, upload.array("attachments"), createTask);
 router.put("/:id", auth, upload.array("attachments"), updateTask);
 router.delete("/:id", auth, deleteTask);
+router.post("/:id/comments", auth, upload.array("attachments"), addComment);
 
 module.exports = router;

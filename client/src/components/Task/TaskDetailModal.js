@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import API from "../../services/api";
+
 
 const formatDate = (dateString) => {
     if (!dateString) return "Không có";
@@ -35,6 +37,11 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     const [editDesc, setEditDesc] = useState("");
     const [editDeadline, setEditDeadline] = useState("");
     const [editPriority, setEditPriority] = useState("Medium");
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    // --- STATE CHO COMMENT ---
+    const [commentText, setCommentText] = useState("");
+    const [commentFiles, setCommentFiles] = useState([]);
+    const fileInputRef = useRef(null);
 
     // 2. RESET STATE KHI ĐỔI TASK HOẶC ĐÓNG SỬA
     useEffect(() => {
@@ -56,8 +63,91 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
         setEditingField(null); // Tắt form sửa
     };
 
-    if (!task) return null;
+    // Hàm xử lý xóa tệp đính kèm ngay lập tức
+    const handleDeleteAttachment = (idxToRemove) => {
+        // Lọc bỏ file bị xóa
+        const newAttachments = task.attachments.filter((_, idx) => idx !== idxToRemove);
 
+        // Đóng gói dữ liệu gửi lên Backend
+        const formData = new FormData();
+        formData.append("title", task.title);
+        formData.append("description", task.description || "");
+        formData.append("deadline", task.deadline || "");
+        formData.append("priority", task.priority || "Medium");
+
+        // Gửi lại danh sách file cũ đã được lọc (retainedAttachments)
+        newAttachments.forEach(file => {
+            formData.append("retainedAttachments", file);
+        });
+
+        // Gọi hàm update của trang cha
+        onUpdate(task._id, formData);
+        setActiveDropdown(null); // Đóng menu
+    };
+
+    // --- HÀM GỬI COMMENT ---
+    const handleCommentSubmit = async () => {
+        // Nếu không gõ chữ và cũng không chọn file thì không làm gì cả
+        if (!commentText.trim() && commentFiles.length === 0) return;
+
+        const formData = new FormData();
+        formData.append("text", commentText);
+
+        // Đính kèm các file mới chọn vào form
+        for (let i = 0; i < commentFiles.length; i++) {
+            formData.append("attachments", commentFiles[i]);
+        }
+
+        try {
+            // Gọi API tạo comment mới (Giả sử Backend bạn đã thiết lập route này)
+            const res = await API.post(`/tasks/${task._id}/comments`, formData);
+
+            // Thành công thì xóa trắng ô nhập và danh sách file tạm
+            setCommentText("");
+            setCommentFiles([]);
+
+            // Báo cho TaskPage biết để cập nhật lại dữ liệu mới nhất
+            if (onUpdate) {
+                // Tùy vào cách bạn viết onUpdate, có thể gọi lại API fetchTasks ở ngoài hoặc truyền data mới ra
+                onUpdate(task._id, null, res.data);
+            }
+        } catch (error) {
+            console.error("Lỗi khi gửi comment:", error);
+        }
+    };
+
+    if (!task) return null;
+    // --- BƯỚC 1: TẠO DÒNG THỜI GIAN (ACTIVITY FEED) ---
+    let activityFeed = [];
+
+    if (task) {
+        // 1. Biến từng file đính kèm ban đầu thành 1 "hành động"
+        if (task.attachments && task.attachments.length > 0) {
+            task.attachments.forEach((file, idx) => {
+                activityFeed.push({
+                    type: 'initial_file',
+                    file: file,
+                    originalIndex: idx, // Giữ lại số thứ tự gốc để tí nữa gọi hàm xóa cho đúng
+                    createdAt: task.createdAt // File ban đầu lấy theo giờ tạo task
+                });
+            });
+        }
+
+        // 2. Nhét các comment vào chung mảng
+        if (task.comments && task.comments.length > 0) {
+            task.comments.forEach(cmt => {
+                activityFeed.push({
+                    type: 'comment',
+                    text: cmt.text,
+                    files: cmt.attachments || [],
+                    createdAt: cmt.createdAt
+                });
+            });
+        }
+
+        // 3. Phép thuật ở đây: Sắp xếp mảng gộp này theo thứ tự MỚI NHẤT -> CŨ NHẤT
+        activityFeed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
     return (
         <div style={styles.overlay} onClick={onClose}>
             <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -150,40 +240,110 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                 </div>
                             </div>
 
-                            {/* HIỂN THỊ ATTACHMENTS */}
+                            {/* --- DÒNG THỜI GIAN: COMMENT & ATTACHMENTS --- */}
                             <div style={{ marginTop: "40px", borderTop: "1px solid #f0f0f0", paddingTop: "20px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", fontSize: "14px", marginBottom: "20px", color: "#202020" }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                                    Đính kèm ({task.attachments ? task.attachments.length : 0})
+                                <div style={{ fontSize: "14px", fontWeight: "600", color: "#202020", marginBottom: "20px" }}>
+                                    Hoạt động
                                 </div>
 
-                                {task.attachments && task.attachments.map((file, idx) => {
-                                    const isImage = file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
-                                    const fileUrl = `http://localhost:5000/${file}`;
+                                {/* Duyệt qua mảng gộp đã sắp xếp */}
+                                {activityFeed.map((activity, index) => {
+                                    const timeString = new Date(activity.createdAt).toLocaleString("vi-VN", {
+                                        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                                    });
 
                                     return (
-                                        <div key={idx} style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-                                            <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>U</div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>Bạn <span style={{ color: "#aaa", fontWeight: "normal", fontSize: "11px", marginLeft: "8px" }}>Tải lên lúc tạo</span></div>
-                                                {/* NẾU LÀ ẢNH THÌ HIỆN ẢNH, NẾU KHÔNG THÌ HIỆN BOX TÊN FILE */}
-                                                {isImage ? (
-                                                    <img src={fileUrl} alt="attachment" style={{ maxWidth: "300px", borderRadius: "8px", border: "1px solid #eee" }} />
-                                                ) : (
-                                                    <a href={fileUrl} target="_blank" rel="noreferrer" style={{
-                                                        display: "inline-flex", alignItems: "center", gap: "10px",
-                                                        padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "4px",
-                                                        textDecoration: "none", color: "#666", backgroundColor: "#fff", maxWidth: "100%"
-                                                    }}>
-                                                        {/* Icon File màu xanh nhạt */}
-                                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        <div key={index} style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                                            {/* Avatar */}
+                                            <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>
+                                                U
+                                            </div>
 
-                                                        {/* Tên file thật (có cắt gọn nếu tên quá dài) */}
-                                                        <span style={{ fontSize: "14px", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                            {getOriginalFileName(file)}
-                                                        </span>
-                                                    </a>
+                                            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+                                                {/* Header: Tên & Thời gian */}
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                                                    <div style={{ fontSize: "13px", fontWeight: "600", color: "#202020" }}>
+                                                        Bạn <span style={{ color: "#888", fontWeight: "normal", fontSize: "11px", marginLeft: "8px" }}>{timeString}</span>
+                                                    </div>
+
+                                                    {/* NẾU LÀ FILE LÚC TẠO -> HIỆN NÚT 3 CHẤM ĐỂ XÓA (Giữ nguyên logic cũ) */}
+                                                    {activity.type === 'initial_file' && (
+                                                        <div style={{ position: "relative" }}>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveDropdown(activeDropdown === activity.originalIndex ? null : activity.originalIndex);
+                                                                }}
+                                                                style={{ background: "none", border: "none", cursor: "pointer", color: "#888", padding: "0 4px" }}
+                                                                onMouseOver={(e) => e.currentTarget.style.color = "#333"}
+                                                                onMouseOut={(e) => e.currentTarget.style.color = "#888"}
+                                                            >
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                                            </button>
+
+                                                            {activeDropdown === activity.originalIndex && (
+                                                                <div style={{
+                                                                    position: "absolute", top: "100%", right: 0, marginTop: "4px", backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", zIndex: 50, width: "100px", overflow: "hidden"
+                                                                }}>
+                                                                    <button
+                                                                        onClick={() => handleDeleteAttachment(activity.originalIndex)}
+                                                                        style={{ width: "100%", padding: "10px 12px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "#ef4444" }}
+                                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#fef2f2"}
+                                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                                                    >
+                                                                        Xóa tệp
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* --- RENDER NỘI DUNG TÙY THEO LOẠI --- */}
+
+                                                {/* 1. NẾU LÀ FILE ĐÍNH KÈM BAN ĐẦU */}
+                                                {activity.type === 'initial_file' && (() => {
+                                                    const isImg = activity.file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                                                    const fUrl = `http://localhost:5000/${activity.file}`;
+                                                    return isImg ? (
+                                                        <img src={fUrl} alt="attachment" style={{ maxWidth: "300px", borderRadius: "8px", border: "1px solid #eee", marginTop: "4px" }} />
+                                                    ) : (
+                                                        <a href={fUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "12px 16px", border: "1px solid #e5e7eb", borderRadius: "6px", textDecoration: "none", color: "#666", backgroundColor: "#fff", maxWidth: "100%", marginTop: "4px" }}>
+                                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2" flexShrink={0}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                                            <span style={{ fontSize: "14px", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getOriginalFileName(activity.file)}</span>
+                                                        </a>
+                                                    );
+                                                })()}
+
+                                                {/* 2. NẾU LÀ COMMENT */}
+                                                {activity.type === 'comment' && (
+                                                    <>
+                                                        {/* Chữ comment */}
+                                                        {activity.text && (
+                                                            <div style={{ fontSize: "14px", color: "#333", whiteSpace: "pre-wrap", lineHeight: "1.5", marginTop: "4px" }}>
+                                                                {activity.text}
+                                                            </div>
+                                                        )}
+                                                        {/* File của comment (nếu có) */}
+                                                        {activity.files && activity.files.length > 0 && (
+                                                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: activity.text ? "10px" : "4px" }}>
+                                                                {activity.files.map((file, fIdx) => {
+                                                                    const isImg = file.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                                                                    const fUrl = `http://localhost:5000/${file}`;
+                                                                    return isImg ? (
+                                                                        <img key={fIdx} src={fUrl} alt="cmt-img" style={{ maxWidth: "200px", borderRadius: "8px", border: "1px solid #eee" }} />
+                                                                    ) : (
+                                                                        <a key={fIdx} href={fUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 12px", border: "1px solid #e5e7eb", borderRadius: "6px", textDecoration: "none", color: "#666", backgroundColor: "#f9fafb", fontSize: "12px", fontWeight: "500" }}>
+                                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                                                            {getOriginalFileName(file)}
+                                                                        </a>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 )}
+
                                             </div>
                                         </div>
                                     );
@@ -193,6 +353,28 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
 
                         {/* --- KHU VỰC GHIM CỐ ĐỊNH (Nhập Comment) --- */}
                         <div style={{ padding: "16px 32px", borderTop: "1px solid #ebebeb", backgroundColor: "#fff", flexShrink: 0 }}>
+
+                            {/* KHU VỰC HIỂN THỊ TRƯỚC FILE ĐANG CHỌN (Preview) */}
+                            {commentFiles.length > 0 && (
+                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px", paddingLeft: "44px" }}>
+                                    {Array.from(commentFiles).map((file, idx) => (
+                                        <div key={idx} style={{ padding: "4px 10px", backgroundColor: "#f1f5f9", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "11px", color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                                            <span
+                                                style={{ cursor: "pointer", color: "#ef4444", fontWeight: "bold", fontSize: "14px", lineHeight: "1" }}
+                                                onClick={() => {
+                                                    // Xóa file khỏi danh sách chờ gửi
+                                                    const dt = new DataTransfer();
+                                                    Array.from(commentFiles).filter((_, i) => i !== idx).forEach(f => dt.items.add(f));
+                                                    setCommentFiles(dt.files);
+                                                }}
+                                                title="Gỡ file này"
+                                            >×</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                                 {/* Avatar */}
                                 <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>
@@ -200,14 +382,40 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                 </div>
 
                                 {/* Ô nhập liệu bo tròn (Pill shape) */}
-                                <div style={{ flex: 1, display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: "24px", padding: "10px 16px", backgroundColor: "#fff" }}>
+                                <div style={{ flex: 1, display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: "24px", padding: "10px 16px", backgroundColor: "#fff", transition: "border 0.2s" }} onFocus={(e) => e.currentTarget.style.border = "1px solid #3A924A"} onBlur={(e) => e.currentTarget.style.border = "1px solid #e5e7eb"}>
+
                                     <input
                                         type="text"
-                                        placeholder="Comment"
+                                        placeholder="Comment..."
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleCommentSubmit();
+                                        }}
                                         style={{ border: "none", outline: "none", flex: 1, fontSize: "14px", color: "#333", backgroundColor: "transparent" }}
                                     />
-                                    {/* Icon kẹp ghim (Attachment) */}
-                                    <button style={{ background: "none", border: "none", cursor: "not-allowed", color: "#888", display: "flex", alignItems: "center", padding: 0 }}>
+
+                                    {/* THẺ INPUT FILE ẨN */}
+                                    <input
+                                        type="file"
+                                        multiple
+                                        ref={fileInputRef}
+                                        style={{ display: "none" }}
+                                        onChange={(e) => {
+                                            if (e.target.files.length > 0) setCommentFiles(e.target.files);
+                                            // Reset value để có thể chọn lại cùng 1 file nếu lỡ tay xóa
+                                            e.target.value = null;
+                                        }}
+                                    />
+
+                                    {/* Icon kẹp ghim (Kích hoạt thẻ input ẩn) */}
+                                    <button
+                                        onClick={() => fileInputRef.current.click()}
+                                        style={{ background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", padding: 0, transition: "color 0.2s" }}
+                                        onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
+                                        onMouseOut={(e) => e.currentTarget.style.color = "#888"}
+                                        title="Đính kèm tệp"
+                                    >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                     </button>
                                 </div>
