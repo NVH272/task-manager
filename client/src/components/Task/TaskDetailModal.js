@@ -38,12 +38,10 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     const [editDeadline, setEditDeadline] = useState("");
     const [editPriority, setEditPriority] = useState("Medium");
     const [activeDropdown, setActiveDropdown] = useState(null);
-    // --- STATE CHO COMMENT ---
-    const [commentText, setCommentText] = useState("");
-    const [commentFiles, setCommentFiles] = useState([]);
+
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const fileInputRef = useRef(null);
 
-    // 2. RESET STATE KHI ĐỔI TASK HOẶC ĐÓNG SỬA
     useEffect(() => {
         if (task) {
             setEditingField(null);
@@ -116,6 +114,31 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
         }
     };
 
+    // --- HÀM XÓA COMMENT ---
+    const handleDeleteComment = async (commentId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa bình luận này?")) return;
+
+        try {
+            // MẸO DEBUG 1: In ra ID để xem có bị undefined không
+            console.log("Đang xóa comment ID:", commentId, "thuộc Task ID:", task._id);
+
+            // Gọi API xóa comment
+            const res = await API.delete(`/tasks/${task._id}/comments/${commentId}`);
+
+            // Cập nhật lại giao diện
+            if (onUpdate) {
+                onUpdate(task._id, null, res.data);
+            }
+            setActiveDropdown(null);
+        } catch (error) {
+            // Đã bỏ alert() theo yêu cầu.
+            // MẸO DEBUG 2: In ra chi tiết mã lỗi từ Backend trả về
+            console.error("Lỗi khi xóa comment!");
+            console.error("Chi tiết Backend phản hồi:", error.response?.data);
+            console.error("Status Code:", error.response?.status);
+        }
+    };
+
     if (!task) return null;
     // --- BƯỚC 1: TẠO DÒNG THỜI GIAN (ACTIVITY FEED) ---
     let activityFeed = [];
@@ -138,6 +161,7 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
             task.comments.forEach(cmt => {
                 activityFeed.push({
                     type: 'comment',
+                    commentId: cmt._id,
                     text: cmt.text,
                     files: cmt.attachments || [],
                     createdAt: cmt.createdAt
@@ -261,42 +285,61 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
 
                                             <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                                                 {/* Header: Tên & Thời gian */}
+                                                {/* Header: Tên & Thời gian & NÚT 3 CHẤM DÙNG CHUNG */}
                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
                                                     <div style={{ fontSize: "13px", fontWeight: "600", color: "#202020" }}>
                                                         Bạn <span style={{ color: "#888", fontWeight: "normal", fontSize: "11px", marginLeft: "8px" }}>{timeString}</span>
                                                     </div>
 
-                                                    {/* NẾU LÀ FILE LÚC TẠO -> HIỆN NÚT 3 CHẤM ĐỂ XÓA (Giữ nguyên logic cũ) */}
-                                                    {activity.type === 'initial_file' && (
-                                                        <div style={{ position: "relative" }}>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveDropdown(activeDropdown === activity.originalIndex ? null : activity.originalIndex);
-                                                                }}
-                                                                style={{ background: "none", border: "none", cursor: "pointer", color: "#888", padding: "0 4px" }}
-                                                                onMouseOver={(e) => e.currentTarget.style.color = "#333"}
-                                                                onMouseOut={(e) => e.currentTarget.style.color = "#888"}
-                                                            >
-                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                                                            </button>
+                                                    {/* NÚT 3 CHẤM MENU DÙNG CHUNG CẢ FILE LẪN COMMENT */}
+                                                    <div className="activity-dropdown-wrapper" style={{ position: "relative" }}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Dùng index của mảng activityFeed để định danh cho UI Menu (đảm bảo mỗi item có 1 menu riêng)
+                                                                setActiveDropdown(activeDropdown === index ? null : index);
+                                                            }}
+                                                            style={{ background: "none", border: "none", cursor: "pointer", color: "#888", padding: "0 4px" }}
+                                                            onMouseOver={(e) => e.currentTarget.style.color = "#333"}
+                                                            onMouseOut={(e) => e.currentTarget.style.color = "#888"}
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                                        </button>
 
-                                                            {activeDropdown === activity.originalIndex && (
-                                                                <div style={{
-                                                                    position: "absolute", top: "100%", right: 0, marginTop: "4px", backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", zIndex: 50, width: "100px", overflow: "hidden"
-                                                                }}>
-                                                                    <button
-                                                                        onClick={() => handleDeleteAttachment(activity.originalIndex)}
-                                                                        style={{ width: "100%", padding: "10px 12px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "#ef4444" }}
-                                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#fef2f2"}
-                                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                                                                    >
-                                                                        Xóa tệp
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                        {/* MENU DROPDOWN CHUNG */}
+                                                        {activeDropdown === index && (
+                                                            <div style={{
+                                                                position: "absolute", top: "100%", right: 0, marginTop: "4px", backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", zIndex: 50, width: "120px", overflow: "hidden"
+                                                            }}>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveDropdown(null);
+                                                                        alert('Tính năng sửa đang phát triển!');
+                                                                    }}
+                                                                    style={{ width: "100%", padding: "10px 12px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "#374151" }}
+                                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"}
+                                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                                                >
+                                                                    Sửa
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        // Kiểm tra xem đang xóa File hay Comment để gọi hàm cho đúng
+                                                                        if (activity.type === 'initial_file') {
+                                                                            handleDeleteAttachment(activity.originalIndex);
+                                                                        } else if (activity.type === 'comment') {
+                                                                            handleDeleteComment(activity.commentId);
+                                                                        }
+                                                                    }}
+                                                                    style={{ width: "100%", padding: "10px 12px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "#ef4444" }}
+                                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#fef2f2"}
+                                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                                                >
+                                                                    Xóa
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 {/* --- RENDER NỘI DUNG TÙY THEO LOẠI --- */}

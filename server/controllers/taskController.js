@@ -97,3 +97,25 @@ exports.deleteTask = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi xóa công việc" });
   }
 };
+
+exports.deleteComment = async (req, res) => {
+  try {
+    const { id, commentId } = req.params; // Lấy taskId (id) và commentId từ URL
+
+    // Tìm task của user hiện tại và xóa comment có _id trùng khớp
+    const task = await Task.findOneAndUpdate(
+      { _id: id, user: req.user.id },
+      { $pull: { comments: { _id: commentId } } },
+      { new: true } // Trả về task mới sau khi đã xóa comment
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: "Không tìm thấy công việc hoặc bạn không có quyền xóa!" });
+    }
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.error("Lỗi khi xóa comment:", error);
+    res.status(500).json({ message: "Lỗi khi xóa comment" });
+  }
+};
