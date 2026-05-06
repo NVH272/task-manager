@@ -38,8 +38,11 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     const [editPriority, setEditPriority] = useState("Medium");
     const [activeDropdown, setActiveDropdown] = useState(null);
 
-    const [commentFiles, setCommentFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const fileInputRef = useRef(null);
+
+    const [newUploadFiles, setNewUploadFiles] = useState([]);
+    const newFileInputRef = useRef(null);
 
     useEffect(() => {
         if (task) {
@@ -58,6 +61,35 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
 
         onUpdate(task._id, formData);
         setEditingField(null); // Tắt form sửa
+    };
+
+    // --- HÀM TẢI LÊN FILE MỚI CHO TASK ---
+    const handleUploadNewFiles = () => {
+        if (newUploadFiles.length === 0) return;
+
+        const formData = new FormData();
+        formData.append("title", task.title);
+        formData.append("description", task.description || "");
+        formData.append("deadline", task.deadline || "");
+        formData.append("priority", task.priority || "Medium");
+
+        // BẮT BUỘC: Gửi lại toàn bộ file cũ để Backend không xóa mất
+        if (task.attachments) {
+            task.attachments.forEach(file => {
+                formData.append("retainedAttachments", file);
+            });
+        }
+
+        // Đính kèm các file mới vừa chọn
+        for (let i = 0; i < newUploadFiles.length; i++) {
+            formData.append("attachments", newUploadFiles[i]);
+        }
+
+        // Gọi hàm onUpdate (Hàm này sẽ tự động gọi API và giật dữ liệu mới về UI ngay lập tức)
+        onUpdate(task._id, formData);
+
+        // Gửi xong thì làm rỗng danh sách chờ
+        setNewUploadFiles([]);
     };
 
     // Hàm xử lý xóa tệp đính kèm ngay lập tức
@@ -99,7 +131,7 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
             });
         }
 
-        // 3. Phép thuật ở đây: Sắp xếp mảng gộp này theo thứ tự MỚI NHẤT -> CŨ NHẤT
+        // Sắp xếp mảng gộp này theo thứ tự MỚI NHẤT -> CŨ NHẤT
         activityFeed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return (
@@ -291,7 +323,72 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                     );
                                 })}
                             </div>
-                        </div> {/* KẾT THÚC KHU VỰC CUỘN ĐƯỢC */}
+                        </div>
+                        {/* --- KHU VỰC THÊM FILE VÀO TASK (Chỉ gửi file) --- */}
+                        <div style={{ marginTop: "20px", padding: "16px", backgroundColor: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3A924A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    Tải thêm tệp đính kèm
+                                </div>
+
+                                {/* Nút giả để kích hoạt thẻ input ẩn */}
+                                <button
+                                    onClick={() => newFileInputRef.current.click()}
+                                    style={{ padding: "6px 12px", backgroundColor: "#fff", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "12px", fontWeight: "600", color: "#334155", cursor: "pointer", transition: "all 0.2s" }}
+                                    onMouseOver={(e) => { e.currentTarget.style.borderColor = "#3A924A"; e.currentTarget.style.color = "#3A924A"; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#334155"; }}
+                                >
+                                    + Chọn tệp
+                                </button>
+
+                                {/* Thẻ input thật (Bị ẩn đi) */}
+                                <input
+                                    type="file"
+                                    multiple
+                                    ref={newFileInputRef}
+                                    style={{ display: "none" }}
+                                    onChange={(e) => {
+                                        if (e.target.files.length > 0) setNewUploadFiles(e.target.files);
+                                        e.target.value = null; // Tránh lỗi không chọn lại được file cũ
+                                    }}
+                                />
+                            </div>
+
+                            {/* --- GIAO DIỆN PREVIEW FILE ĐANG CHỌN & NÚT GỬI --- */}
+                            {newUploadFiles.length > 0 && (
+                                <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #e2e8f0" }}>
+                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+                                        {Array.from(newUploadFiles).map((file, idx) => (
+                                            <div key={idx} style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", borderRadius: "16px", fontSize: "12px", color: "#475569", display: "flex", alignItems: "center", gap: "6px", fontWeight: "500" }}>
+                                                <span style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                                                <span
+                                                    style={{ cursor: "pointer", color: "#ef4444", fontSize: "14px", lineHeight: "1" }}
+                                                    onClick={() => {
+                                                        // Hàm gỡ bỏ 1 file khỏi danh sách đang chọn
+                                                        const dt = new DataTransfer();
+                                                        Array.from(newUploadFiles).filter((_, i) => i !== idx).forEach(f => dt.items.add(f));
+                                                        setNewUploadFiles(dt.files);
+                                                    }}
+                                                >×</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Nút Tải Lên */}
+                                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                        <button
+                                            onClick={handleUploadNewFiles}
+                                            style={{ padding: "8px 20px", backgroundColor: "#3A924A", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: "pointer", boxShadow: "0 2px 4px rgba(58, 146, 74, 0.2)", transition: "background 0.2s" }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#2d7339"}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#3A924A"}
+                                        >
+                                            Tải lên ngay
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* CỘT PHẢI */}
