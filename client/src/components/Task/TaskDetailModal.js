@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-
+import API from "../../services/api";
 
 const formatDate = (dateString) => {
     if (!dateString) return "Không có";
@@ -43,6 +43,13 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
 
     const [newUploadFiles, setNewUploadFiles] = useState([]);
     const newFileInputRef = useRef(null);
+    const [isUploadingNewFiles, setIsUploadingNewFiles] = useState(false);
+
+    // --- STATE CHO SUB-TASKS ---
+    const [isSubtaskOpen, setIsSubtaskOpen] = useState(true); // Đóng/mở danh sách subtask
+    const [hideCompletedSubtasks, setHideCompletedSubtasks] = useState(false); // Ẩn subtask đã xong
+    const [isAddingSubtask, setIsAddingSubtask] = useState(false); // Bật/tắt ô nhập subtask mới
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
     useEffect(() => {
         if (task) {
@@ -64,8 +71,9 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     };
 
     // --- HÀM TẢI LÊN FILE MỚI CHO TASK ---
-    const handleUploadNewFiles = () => {
+    const handleUploadNewFiles = async () => {
         if (newUploadFiles.length === 0) return;
+        if (isUploadingNewFiles) return;
 
         const formData = new FormData();
         formData.append("title", task.title);
@@ -81,15 +89,20 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
         }
 
         // Đính kèm các file mới vừa chọn
-        for (let i = 0; i < newUploadFiles.length; i++) {
-            formData.append("attachments", newUploadFiles[i]);
+        newUploadFiles.forEach((file) => {
+            formData.append("attachments", file);
+        });
+
+        try {
+            setIsUploadingNewFiles(true);
+            // Gọi hàm onUpdate (Hàm này sẽ tự động gọi API và giật dữ liệu mới về UI ngay lập tức)
+            await onUpdate(task._id, formData);
+
+            // Gửi xong thì làm rỗng danh sách chờ
+            setNewUploadFiles([]);
+        } finally {
+            setIsUploadingNewFiles(false);
         }
-
-        // Gọi hàm onUpdate (Hàm này sẽ tự động gọi API và giật dữ liệu mới về UI ngay lập tức)
-        onUpdate(task._id, formData);
-
-        // Gửi xong thì làm rỗng danh sách chờ
-        setNewUploadFiles([]);
     };
 
     // Hàm xử lý xóa tệp đính kèm ngay lập tức
@@ -114,7 +127,39 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
         setActiveDropdown(null); // Đóng menu
     };
 
+    // --- HÀM XỬ LÝ SUB-TASKS ---
+    // 1. Thêm Sub-task mới
+    const handleAddSubtask = async () => {
+        if (!newSubtaskTitle.trim()) return;
+        try {
+            // Gọi API thêm subtask (Bạn cần code API này ở Backend)
+            const res = await API.post(`/tasks/${task._id}/subtasks`, { title: newSubtaskTitle });
+            if (onUpdate) onUpdate(task._id, null, res.data); // Cập nhật UI
+            setNewSubtaskTitle("");
+            setIsAddingSubtask(false);
+        } catch (error) {
+            console.error("Lỗi khi thêm sub-task:", error);
+        }
+    };
+
+    // 2. Đánh dấu hoàn thành / chưa hoàn thành Sub-task
+    const handleToggleSubtask = async (subtaskId, currentStatus) => {
+        try {
+            const res = await API.put(`/tasks/${task._id}/subtasks/${subtaskId}`, { completed: !currentStatus });
+            if (onUpdate) onUpdate(task._id, null, res.data);
+        } catch (error) {
+            console.error("Lỗi khi cập nhật sub-task:", error);
+        }
+    };
+
     if (!task) return null;
+
+    // Tính toán thanh tiến trình Sub-task
+    const subtasks = task.subtasks || [];
+    const completedSubtasksCount = subtasks.filter(st => st.completed).length;
+    const totalSubtasksCount = subtasks.length;
+
+
     // --- BƯỚC 1: TẠO DÒNG THỜI GIAN (ACTIVITY FEED) ---
     let activityFeed = [];
 
@@ -223,7 +268,98 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                             </div>
                                         </div>
                                     )}
+                                    {/* --- KHU VỰC SUB-TASKS --- */}
+                                    <div style={{ marginTop: "30px", borderTop: "1px solid #f0f0f0", paddingTop: "20px" }}>
+
+                                        {/* HEADER: Mũi tên, Tiêu đề, Đếm số lượng, Nút Ẩn/Hiện */}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "600", fontSize: "14px", color: "#202020", cursor: "pointer" }} onClick={() => setIsSubtaskOpen(!isSubtaskOpen)}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: isSubtaskOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                                Sub-tasks
+
+                                                {/* Tròn đếm tiến trình */}
+                                                {totalSubtasksCount > 0 && (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "12px", fontSize: "11px", color: "#64748b", marginLeft: "4px" }}>
+                                                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: `conic-gradient(#3b82f6 ${(completedSubtasksCount / totalSubtasksCount) * 360}deg, #cbd5e1 0deg)` }}></div>
+                                                        {completedSubtasksCount}/{totalSubtasksCount}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                onClick={() => setHideCompletedSubtasks(!hideCompletedSubtasks)}
+                                                style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", cursor: "pointer" }}
+                                            >
+                                                {hideCompletedSubtasks ? "Show completed" : "Hide completed"}
+                                            </button>
+                                        </div>
+                                        {/* NỘI DUNG SUB-TASKS */}
+                                        {isSubtaskOpen && (
+                                            <div>
+                                                {/* NÚT THÊM SUB-TASK (Hoặc Ô nhập liệu) */}
+                                                {!isAddingSubtask ? (
+                                                    <div
+                                                        style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", cursor: "pointer", color: "#888", fontSize: "14px", transition: "color 0.2s" }}
+                                                        onMouseOver={(e) => e.currentTarget.style.color = "#db4c3f"}
+                                                        onMouseOut={(e) => e.currentTarget.style.color = "#888"}
+                                                        onClick={() => setIsAddingSubtask(true)}
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#db4c3f" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                        Add sub-task
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", marginBottom: "16px", backgroundColor: "#fff" }}>
+                                                        <input
+                                                            autoFocus
+                                                            type="text"
+                                                            placeholder="Ví dụ: Lên dàn ý bài viết..."
+                                                            value={newSubtaskTitle}
+                                                            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handleAddSubtask();
+                                                                if (e.key === 'Escape') setIsAddingSubtask(false);
+                                                            }}
+                                                            style={{ width: "100%", border: "none", outline: "none", fontSize: "14px", marginBottom: "10px", fontWeight: "500" }}
+                                                        />
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            <button onClick={() => setIsAddingSubtask(false)} style={styles.btnCancel}>Cancel</button>
+                                                            <button onClick={handleAddSubtask} disabled={!newSubtaskTitle.trim()} style={{ ...styles.btnSubmit, opacity: !newSubtaskTitle.trim() ? 0.5 : 1 }}>Add Task</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* DANH SÁCH SUB-TASKS */}
+                                                {subtasks.map((st) => {
+                                                    if (hideCompletedSubtasks && st.completed) return null;
+
+                                                    return (
+                                                        <div key={st._id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
+                                                            {/* Vòng tròn Checkbox */}
+                                                            <div
+                                                                onClick={() => handleToggleSubtask(st._id, st.completed)}
+                                                                style={{
+                                                                    width: "16px", height: "16px", borderRadius: "50%",
+                                                                    border: st.completed ? "none" : "2px solid #cbd5e1",
+                                                                    backgroundColor: st.completed ? "#cbd5e1" : "transparent",
+                                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                                    cursor: "pointer"
+                                                                }}
+                                                            >
+                                                                {st.completed && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                            </div>
+                                                            {/* Text của Sub-task */}
+                                                            <div style={{ flex: 1, fontSize: "14px", color: st.completed ? "#94a3b8" : "#334155", textDecoration: st.completed ? "line-through" : "none" }}>
+                                                                {st.title}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+
+
                             </div>
 
                             {/* --- DÒNG THỜI GIAN: COMMENT & ATTACHMENTS --- */}
@@ -268,12 +404,12 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                                                         </button>
 
-                                                        {/* MENU DROPDOWN CHUNG */}
+                                                        {/* MENU DROPDOWN */}
                                                         {activeDropdown === index && (
                                                             <div style={{
-                                                                position: "absolute", top: "100%", right: 0, marginTop: "4px", backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", zIndex: 50, width: "120px", overflow: "hidden"
+                                                                position: "absolute", top: "100%", right: 0, marginTop: "4px", backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", zIndex: 50, width: "100px", overflow: "hidden"
                                                             }}>
-                                                                <button
+                                                                {/* <button
                                                                     onClick={() => {
                                                                         setActiveDropdown(null);
                                                                         alert('Tính năng sửa đang phát triển!');
@@ -283,7 +419,7 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                                                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                                                 >
                                                                     Sửa
-                                                                </button>
+                                                                </button> */}
                                                                 <button
                                                                     onClick={() => {
                                                                         if (activity.type === 'initial_file') {
@@ -349,7 +485,22 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                     ref={newFileInputRef}
                                     style={{ display: "none" }}
                                     onChange={(e) => {
-                                        if (e.target.files.length > 0) setNewUploadFiles(e.target.files);
+                                        const picked = Array.from(e.target.files || []);
+                                        if (picked.length > 0) {
+                                            setNewUploadFiles((prev) => {
+                                                const next = [...prev];
+                                                const key = (f) => `${f.name}|${f.size}|${f.lastModified}`;
+                                                const seen = new Set(next.map(key));
+                                                for (const f of picked) {
+                                                    const k = key(f);
+                                                    if (!seen.has(k)) {
+                                                        next.push(f);
+                                                        seen.add(k);
+                                                    }
+                                                }
+                                                return next;
+                                            });
+                                        }
                                         e.target.value = null; // Tránh lỗi không chọn lại được file cũ
                                     }}
                                 />
@@ -359,18 +510,51 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                             {newUploadFiles.length > 0 && (
                                 <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #e2e8f0" }}>
                                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-                                        {Array.from(newUploadFiles).map((file, idx) => (
-                                            <div key={idx} style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", borderRadius: "16px", fontSize: "12px", color: "#475569", display: "flex", alignItems: "center", gap: "6px", fontWeight: "500" }}>
-                                                <span style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
-                                                <span
-                                                    style={{ cursor: "pointer", color: "#ef4444", fontSize: "14px", lineHeight: "1" }}
-                                                    onClick={() => {
-                                                        // Hàm gỡ bỏ 1 file khỏi danh sách đang chọn
-                                                        const dt = new DataTransfer();
-                                                        Array.from(newUploadFiles).filter((_, i) => i !== idx).forEach(f => dt.items.add(f));
-                                                        setNewUploadFiles(dt.files);
+                                        {newUploadFiles.map((file, idx) => (
+                                            <div
+                                                key={`${file.name}-${file.size}-${file.lastModified}-${idx}`}
+                                                style={{
+                                                    position: "relative",
+                                                    padding: "8px 28px 8px 12px",
+                                                    backgroundColor: "#e2e8f0",
+                                                    borderRadius: "14px",
+                                                    fontSize: "12px",
+                                                    color: "#475569",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    fontWeight: "500",
+                                                    maxWidth: "240px"
+                                                }}
+                                                title={file.name}
+                                            >
+                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNewUploadFiles((prev) => prev.filter((_, i) => i !== idx))}
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: "-6px",
+                                                        right: "-6px",
+                                                        width: "18px",
+                                                        height: "18px",
+                                                        borderRadius: "999px",
+                                                        border: "1px solid #fecaca",
+                                                        backgroundColor: "#fff",
+                                                        color: "#ef4444",
+                                                        cursor: "pointer",
+                                                        lineHeight: "16px",
+                                                        fontSize: "14px",
+                                                        fontWeight: "700",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        padding: 0
                                                     }}
-                                                >×</span>
+                                                    aria-label={`Xóa ${file.name}`}
+                                                >
+                                                    ×
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -379,11 +563,24 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                     <div style={{ display: "flex", justifyContent: "flex-end" }}>
                                         <button
                                             onClick={handleUploadNewFiles}
-                                            style={{ padding: "8px 20px", backgroundColor: "#3A924A", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: "pointer", boxShadow: "0 2px 4px rgba(58, 146, 74, 0.2)", transition: "background 0.2s" }}
-                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#2d7339"}
-                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#3A924A"}
+                                            disabled={isUploadingNewFiles}
+                                            style={{
+                                                padding: "8px 20px",
+                                                backgroundColor: isUploadingNewFiles ? "#94a3b8" : "#3A924A",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                fontSize: "13px",
+                                                fontWeight: "600",
+                                                cursor: isUploadingNewFiles ? "not-allowed" : "pointer",
+                                                boxShadow: "0 2px 4px rgba(58, 146, 74, 0.2)",
+                                                transition: "background 0.2s",
+                                                opacity: isUploadingNewFiles ? 0.9 : 1
+                                            }}
+                                            onMouseOver={(e) => { if (!isUploadingNewFiles) e.currentTarget.style.backgroundColor = "#2d7339"; }}
+                                            onMouseOut={(e) => { if (!isUploadingNewFiles) e.currentTarget.style.backgroundColor = "#3A924A"; }}
                                         >
-                                            Tải lên ngay
+                                            {isUploadingNewFiles ? "Đang gửi..." : "Gửi các tệp đã chọn"}
                                         </button>
                                     </div>
                                 </div>

@@ -28,11 +28,10 @@ const taskSchema = new mongoose.Schema({
     enum: ['Low', 'Medium', 'High'],
     default: 'Medium'
   },
-  comments: [{
-    text: { type: String },
-    attachments: [{ type: String }], // Lưu đường dẫn file đính kèm của comment
-    createdAt: { type: Date, default: Date.now }
-  }]
+  subtasks: [{
+    title: { type: String, required: true },
+    completed: { type: Boolean, default: false }
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model("Task", taskSchema);
