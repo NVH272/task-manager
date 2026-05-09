@@ -7,6 +7,10 @@ const {
   createTask,
   updateTask,
   deleteTask,
+
+  addSubtask,
+  updateSubtask,
+  deleteSubtask
 } = require("../controllers/taskController");
 
 const multer = require("multer");
@@ -34,5 +38,10 @@ router.get("/", auth, getTasks);
 router.post("/", auth, upload.array("attachments"), createTask);
 router.put("/:id", auth, upload.array("attachments"), updateTask);
 router.delete("/:id", auth, deleteTask);
+
+// Subtask routes
+router.post("/:id/subtasks", auth, addSubtask);
+router.put("/:id/subtasks/:subtaskId", auth, updateSubtask);
+router.delete("/:id/subtasks/:subtaskId", auth, deleteSubtask);
 
 module.exports = router;

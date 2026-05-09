@@ -27,7 +27,8 @@ const getOriginalFileName = (path) => {
     return fileName.replace(/^\d+-\d+-/, '');
 };
 
-function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
+function TaskDetailModal({ task: initialTask, onClose, toggleComplete, onUpdate }) {
+    const [task, setTask] = useState(initialTask);
     // 1. STATE QUẢN LÝ INLINE EDITING
     // Lưu xem đang sửa trường nào: 'text' (Title+Desc), 'deadline', 'priority', hoặc null
     const [editingField, setEditingField] = useState(null);
@@ -50,12 +51,15 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     const [hideCompletedSubtasks, setHideCompletedSubtasks] = useState(false); // Ẩn subtask đã xong
     const [isAddingSubtask, setIsAddingSubtask] = useState(false); // Bật/tắt ô nhập subtask mới
     const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+    const [editingSubtaskId, setEditingSubtaskId] = useState(null);
+    const [editSubtaskTitle, setEditSubtaskTitle] = useState("");
 
     useEffect(() => {
-        if (task) {
+        if (initialTask) {
+            setTask(initialTask); // Cập nhật lại state nội bộ nếu trang cha truyền data mới xuống
             setEditingField(null);
         }
-    }, [task]);
+    }, [initialTask]);
 
     // 3. HÀM LƯU TỰ ĐỘNG THÔNG MINH
     // Chỉ cần truyền vào trường muốn update, nó sẽ lấy các trường còn lại từ task gốc
@@ -134,6 +138,7 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
         try {
             // Gọi API thêm subtask (Bạn cần code API này ở Backend)
             const res = await API.post(`/tasks/${task._id}/subtasks`, { title: newSubtaskTitle });
+            setTask(res.data);
             if (onUpdate) onUpdate(task._id, null, res.data); // Cập nhật UI
             setNewSubtaskTitle("");
             setIsAddingSubtask(false);
@@ -146,9 +151,38 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
     const handleToggleSubtask = async (subtaskId, currentStatus) => {
         try {
             const res = await API.put(`/tasks/${task._id}/subtasks/${subtaskId}`, { completed: !currentStatus });
+            setTask(res.data);
             if (onUpdate) onUpdate(task._id, null, res.data);
         } catch (error) {
             console.error("Lỗi khi cập nhật sub-task:", error);
+        }
+    };
+
+    // 3. Lưu nội dung khi Sửa Sub-task
+    const handleSaveEditSubtask = async (subtaskId) => {
+        if (!editSubtaskTitle.trim()) {
+            setEditingSubtaskId(null);
+            return;
+        }
+        try {
+            const res = await API.put(`/tasks/${task._id}/subtasks/${subtaskId}`, { title: editSubtaskTitle });
+            setTask(res.data);
+            if (onUpdate) onUpdate(task._id, null, res.data); // Cập nhật lại UI
+            setEditingSubtaskId(null); // Tắt form sửa
+        } catch (error) {
+            console.error("Lỗi khi sửa sub-task:", error);
+        }
+    };
+
+    // 4. Xóa Sub-task
+    const handleDeleteSubtask = async (subtaskId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa công việc phụ này?")) return;
+        try {
+            const res = await API.delete(`/tasks/${task._id}/subtasks/${subtaskId}`);
+            setTask(res.data);
+            if (onUpdate) onUpdate(task._id, null, res.data);
+        } catch (error) {
+            console.error("Lỗi khi xóa sub-task:", error);
         }
     };
 
@@ -332,8 +366,33 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                                 {subtasks.map((st) => {
                                                     if (hideCompletedSubtasks && st.completed) return null;
 
+                                                    // 1. GIAO DIỆN KHI ĐANG SỬA SUB-TASK NÀY
+                                                    if (editingSubtaskId === st._id) {
+                                                        return (
+                                                            <div key={st._id} style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", marginBottom: "8px", backgroundColor: "#fff" }}>
+                                                                <input
+                                                                    autoFocus
+                                                                    type="text"
+                                                                    value={editSubtaskTitle}
+                                                                    onChange={(e) => setEditSubtaskTitle(e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') handleSaveEditSubtask(st._id);
+                                                                        if (e.key === 'Escape') setEditingSubtaskId(null);
+                                                                    }}
+                                                                    style={{ width: "100%", border: "none", outline: "none", fontSize: "14px", marginBottom: "10px", fontWeight: "500" }}
+                                                                />
+                                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                                    <button onClick={() => setEditingSubtaskId(null)} style={styles.btnCancel}>Cancel</button>
+                                                                    <button onClick={() => handleSaveEditSubtask(st._id)} disabled={!editSubtaskTitle.trim()} style={{ ...styles.btnSubmit, opacity: !editSubtaskTitle.trim() ? 0.5 : 1 }}>Save</button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    // 2. GIAO DIỆN LÚC XEM BÌNH THƯỜNG
                                                     return (
-                                                        <div key={st._id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
+                                                        <div key={st._id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
+
                                                             {/* Vòng tròn Checkbox */}
                                                             <div
                                                                 onClick={() => handleToggleSubtask(st._id, st.completed)}
@@ -342,14 +401,40 @@ function TaskDetailModal({ task, onClose, toggleComplete, onUpdate }) {
                                                                     border: st.completed ? "none" : "2px solid #cbd5e1",
                                                                     backgroundColor: st.completed ? "#cbd5e1" : "transparent",
                                                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                                                    cursor: "pointer"
+                                                                    cursor: "pointer", flexShrink: 0
                                                                 }}
                                                             >
                                                                 {st.completed && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                                                             </div>
+
                                                             {/* Text của Sub-task */}
                                                             <div style={{ flex: 1, fontSize: "14px", color: st.completed ? "#94a3b8" : "#334155", textDecoration: st.completed ? "line-through" : "none" }}>
                                                                 {st.title}
+                                                            </div>
+
+                                                            {/* Khối nút Hành động (Sửa/Xóa) */}
+                                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingSubtaskId(st._id);
+                                                                        setEditSubtaskTitle(st.title);
+                                                                    }}
+                                                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: "4px" }}
+                                                                    onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
+                                                                    onMouseOut={(e) => e.currentTarget.style.color = "#94a3b8"}
+                                                                    title="Sửa"
+                                                                >
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteSubtask(st._id)}
+                                                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: "4px" }}
+                                                                    onMouseOver={(e) => e.currentTarget.style.color = "#ef4444"}
+                                                                    onMouseOut={(e) => e.currentTarget.style.color = "#94a3b8"}
+                                                                    title="Xóa"
+                                                                >
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     );
