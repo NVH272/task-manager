@@ -55,8 +55,9 @@ function TaskDetailModal({ task: initialTask, onClose, toggleComplete, onUpdate 
     const [editSubtaskTitle, setEditSubtaskTitle] = useState("");
 
     useEffect(() => {
+        setTask(initialTask);
+
         if (initialTask) {
-            setTask(initialTask); // Cập nhật lại state nội bộ nếu trang cha truyền data mới xuống
             setEditingField(null);
         }
     }, [initialTask]);
