@@ -5,6 +5,7 @@ function TaskAddForm({
     description, setDescription,
     setAttachments,
     deadline, setDeadline,
+    deadlineTime, setDeadlineTime,
     priority, setPriority,
     isAdding, setIsAdding,
     addTask,
@@ -18,6 +19,7 @@ function TaskAddForm({
                 onClick={() => {
                     setIsAdding(true);
                     setDeadline(""); // Reset form mỗi khi mở
+                    setDeadlineTime("");
                     setPriority("Medium");
                 }}
                 onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
@@ -66,6 +68,12 @@ function TaskAddForm({
                     type="date"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
+                    style={styles.inputSmall}
+                />
+                <input
+                    type="time"
+                    value={deadlineTime}
+                    onChange={(e) => setDeadlineTime(e.target.value)}
                     style={styles.inputSmall}
                 />
                 <select

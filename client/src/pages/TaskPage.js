@@ -18,6 +18,7 @@ function TaskPage() {
   const [retainedAttachments, setRetainedAttachments] = useState([]);
 
   const [deadline, setDeadline] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("");
   const [priority, setPriority] = useState("Medium");
 
   const [searchQuery, setSearchQuery] = useState(""); // Lưu từ khóa tìm kiếm
@@ -34,13 +35,21 @@ function TaskPage() {
     }
   };
 
+  const composeDeadline = (date, time) => {
+    if (!date) return "";
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = (time || "00:00").split(":").map(Number);
+    const localDate = new Date(year, (month || 1) - 1, day || 1, hour || 0, minute || 0, 0, 0);
+    return localDate.toISOString();
+  };
+
   const addTask = async () => {
     if (!title.trim()) return;
 
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
-    formData.append("deadline", deadline);
+    formData.append("deadline", composeDeadline(deadline, deadlineTime));
     formData.append("priority", priority);
 
     // Đính kèm các file
@@ -56,6 +65,8 @@ function TaskPage() {
       setTitle("");
       setDescription("");
       setAttachments([]);
+      setDeadline("");
+      setDeadlineTime("");
       setIsAdding(false);
       fetchTasks();
     } catch (error) {
@@ -76,8 +87,15 @@ function TaskPage() {
     setEditingId(task._id);
     setEditTitle(task.title);
     // Lấy ngày chuẩn
-    const dateStr = task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : "";
+    const deadlineDate = task.deadline ? new Date(task.deadline) : null;
+    const dateStr = deadlineDate
+      ? `${deadlineDate.getFullYear()}-${String(deadlineDate.getMonth() + 1).padStart(2, "0")}-${String(deadlineDate.getDate()).padStart(2, "0")}`
+      : "";
+    const timeStr = deadlineDate
+      ? `${String(deadlineDate.getHours()).padStart(2, "0")}:${String(deadlineDate.getMinutes()).padStart(2, "0")}`
+      : "";
     setDeadline(dateStr);
+    setDeadlineTime(timeStr);
     setPriority(task.priority || "Medium");
 
     setDescription(task.description || ""); // Đổ mô tả cũ ra
@@ -95,7 +113,7 @@ function TaskPage() {
     const formData = new FormData();
     formData.append("title", editTitle);
     formData.append("description", description);
-    formData.append("deadline", deadline);
+    formData.append("deadline", composeDeadline(deadline, deadlineTime));
     formData.append("priority", priority);
 
     // 1. Gửi file cũ ĐƯỢC GIỮ LẠI
@@ -116,6 +134,7 @@ function TaskPage() {
 
       // Reset lại các trường tạm
       setDeadline("");
+      setDeadlineTime("");
       setPriority("Medium");
       setDescription("");
       setAttachments([]);
@@ -143,8 +162,19 @@ function TaskPage() {
 
   const toggleComplete = async (task) => {
     try {
-      await API.put(`/tasks/${task._id}`, { completed: !task.completed });
+      const res = await API.put(`/tasks/${task._id}`, {
+        completed: !task.completed,
+        retainedAttachments: task.attachments || [] // Đảm bảo gửi kèm file cũ nếu có, tránh bị mất khi toggle
+      });
+
+      // Tải lại danh sách Task bên ngoài
       fetchTasks();
+      // if (selectedTask && selectedTask._id === task._id) {
+      //   setSelectedTask(res.data);
+      // }
+      if (selectedTask && selectedTask._id === task._id) {
+        setSelectedTask(null);
+      }
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái", error);
     }
@@ -152,6 +182,7 @@ function TaskPage() {
 
   // --- LOGIC TÌM KIẾM VÀ SẮP XẾP ---
   const displayedTasks = tasks
+    .filter(task => !task.completed)
     // 1. TÌM KIẾM: Giữ lại những task có chứa từ khóa (không phân biệt hoa/thường)
     .filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()))
     // 2. SẮP XẾP:
@@ -315,6 +346,7 @@ function TaskPage() {
         description={description} setDescription={setDescription}
         setAttachments={setAttachments}
         deadline={deadline} setDeadline={setDeadline}
+        deadlineTime={deadlineTime} setDeadlineTime={setDeadlineTime}
         priority={priority} setPriority={setPriority}
         isAdding={isAdding} setIsAdding={setIsAdding}
         addTask={addTask}
@@ -343,6 +375,7 @@ function TaskPage() {
               editTitle={editTitle} setEditTitle={setEditTitle}
               description={description} setDescription={setDescription}
               deadline={deadline} setDeadline={setDeadline}
+              deadlineTime={deadlineTime} setDeadlineTime={setDeadlineTime}
               priority={priority} setPriority={setPriority}
               attachments={attachments} setAttachments={setAttachments}
               saveEdit={saveEdit} startEditing={startEditing}

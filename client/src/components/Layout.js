@@ -248,6 +248,7 @@ function Layout() {
           ) : (
             <>
               <Link to="/tasks" style={styles.navLink}>My Tasks</Link>
+              <Link to="/completed" style={styles.navLink}>Completed</Link>
               <div style={styles.avatarContainer} ref={dropdownRef}>
                 <img src="https://via.placeholder.com/150" alt="Avatar" style={styles.avatarImg} onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
                 {isDropdownOpen && (

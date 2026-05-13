@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import Layout from "./components/Layout";
 import LandingPage from "./pages/LandingPage";
 import TaskPage from "./pages/TaskPage";
+import CompletedPage from "./pages/CompletedPage";
 
 function App() {
   const [token, setToken] = useState(null);
@@ -24,7 +25,7 @@ function App() {
       // - Cập nhật State để React cho phép vào trang Task
       setToken(tokenFromUrl);
       window.location.href = "/tasks";
-      
+
       // - (Tùy chọn) Xóa cái đoạn ?token=... trên URL cho đẹp trình duyệt
       window.history.replaceState({}, document.title, "/");
     } else {
@@ -32,7 +33,7 @@ function App() {
       const savedToken = localStorage.getItem("token");
       setToken(savedToken);
     }
-    
+
     setLoading(false);
   }, []);
 
@@ -45,19 +46,20 @@ function App() {
       <Routes>
         {/* Layout bọc TRỌN VẸN toàn bộ ứng dụng */}
         <Route path="/" element={<Layout />}>
-          
+
           {/* Trang chủ */}
-          <Route index element={<LandingPage />} /> 
-          
+          <Route index element={<LandingPage />} />
+
           {/* 2 Trang xác thực */}
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
-          
+
           {/* Trang không gian làm việc */}
-          <Route 
-            path="tasks" 
-            element={token ? <TaskPage /> : <Navigate to="/login" replace />} 
+          <Route
+            path="tasks"
+            element={token ? <TaskPage /> : <Navigate to="/login" replace />}
           />
+          <Route path="/completed" element={<CompletedPage />} />
         </Route>
       </Routes>
     </Router>

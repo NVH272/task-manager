@@ -12,6 +12,15 @@ const getDeadlineStatus = (date) => {
     return "normal";
 };
 
+const formatDeadlineTag = (date) => {
+    if (!date) return "";
+    const deadlineDate = new Date(date);
+    if (Number.isNaN(deadlineDate.getTime())) return "";
+    const datePart = deadlineDate.toLocaleDateString("vi-VN");
+    const timePart = `${String(deadlineDate.getHours()).padStart(2, "0")}:${String(deadlineDate.getMinutes()).padStart(2, "0")}`;
+    return `${datePart} ${timePart}`;
+};
+
 function TaskItem({
     task,
     styles, // Nhận object styles từ cha truyền xuống
@@ -23,6 +32,8 @@ function TaskItem({
     setDescription,
     deadline,
     setDeadline,
+    deadlineTime,
+    setDeadlineTime,
     priority,
     setPriority,
     attachments,
@@ -163,6 +174,15 @@ function TaskItem({
                                 style={{ border: "none", outline: "none", backgroundColor: "transparent", fontSize: "13px", color: "#334155", cursor: "pointer", fontFamily: "inherit" }}
                             />
                         </div>
+                        <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "6px 10px", backgroundColor: "#f8fafc", transition: "border-color 0.2s" }} onFocus={(e) => e.currentTarget.style.border = "1px solid #3A924A"} onBlur={(e) => e.currentTarget.style.border = "1px solid #e2e8f0"}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3A924A" strokeWidth="2" style={{ marginRight: "8px" }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <input
+                                type="time"
+                                value={deadlineTime}
+                                onChange={(e) => setDeadlineTime(e.target.value)}
+                                style={{ border: "none", outline: "none", backgroundColor: "transparent", fontSize: "13px", color: "#334155", cursor: "pointer", fontFamily: "inherit" }}
+                            />
+                        </div>
 
                         {/* Box Ưu tiên */}
                         <div style={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "6px 10px", backgroundColor: "#f8fafc", transition: "border-color 0.2s" }} onFocus={(e) => e.currentTarget.style.border = "1px solid #3A924A"} onBlur={(e) => e.currentTarget.style.border = "1px solid #e2e8f0"}>
@@ -275,7 +295,7 @@ function TaskItem({
                                         backgroundColor: getDeadlineStatus(task.deadline) === "overdue" ? "#fee2e2" : getDeadlineStatus(task.deadline) === "urgent" ? "#fef3c7" : "#f1f5f9",
                                         color: getDeadlineStatus(task.deadline) === "overdue" ? "#dc2626" : getDeadlineStatus(task.deadline) === "urgent" ? "#d97706" : "#475569"
                                     }}>
-                                        {new Date(task.deadline).toLocaleDateString("vi-VN")}
+                                        {formatDeadlineTag(task.deadline)}
                                         {getDeadlineStatus(task.deadline) === "overdue" ? " (Quá hạn)" : ""}
                                         {getDeadlineStatus(task.deadline) === "urgent" ? " (Hôm nay)" : ""}
                                     </span>
