@@ -31,6 +31,10 @@ app.use("/tasks", taskRoutes);
 const authRoutes = require("./routes/authRoutes");
 app.use("/auth", authRoutes);
 
+// deadline job
+const startDeadlineJob = require("./jobs/deadlineJob");
+startDeadlineJob(); // Bắt đầu chạy công việc kiểm tra deadline mỗi phút
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER
