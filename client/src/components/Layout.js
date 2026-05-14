@@ -253,7 +253,7 @@ function Layout() {
                 <img src="https://via.placeholder.com/150" alt="Avatar" style={styles.avatarImg} onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
                 {isDropdownOpen && (
                   <div style={styles.dropdownMenu}>
-                    <Link to="/account" style={styles.dropdownItem} onClick={() => setIsDropdownOpen(false)}>Account</Link>
+                    <Link to="/account" style={styles.dropdownItem} onClick={() => setIsDropdownOpen(false)}>Setting</Link>
                     <div style={styles.dropdownDivider}></div>
                     <button style={{ ...styles.dropdownItem, color: "#d93025" }} onClick={() => { setIsDropdownOpen(false); handleLogout(); }}>Log out</button>
                   </div>
