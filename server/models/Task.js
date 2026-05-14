@@ -23,6 +23,13 @@ const taskSchema = new mongoose.Schema({
   deadline: {
     type: Date
   },
+  notifiedAt: {
+    oneDay: { type: Boolean, default: false },
+    oneHour: { type: Boolean, default: false },
+    thirtyMins: { type: Boolean, default: false },
+    fiveMins: { type: Boolean, default: false },
+    overdueTenMins: { type: Boolean, default: false }
+  },
   priority: {
     type: String,
     enum: ['Low', 'Medium', 'High'],
