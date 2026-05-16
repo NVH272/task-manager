@@ -4,15 +4,15 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: "email_cua_ban@gmail.com", // ĐIỀN EMAIL CỦA BẠN VÀO ĐÂY
-        pass: "mat_khau_ung_dung_cua_ban", // ĐIỀN MẬT KHẨU ỨNG DỤNG (App Password) VÀO ĐÂY
+        user: "nguyenviethoang435@gmail.com", // ĐIỀN EMAIL CỦA BẠN VÀO ĐÂY
+        pass: "ihbclgpxntdcnova", // ĐIỀN MẬT KHẨU ỨNG DỤNG (App Password) VÀO ĐÂY
     },
 });
 
 const sendDeadlineEmail = async (toEmail, taskTitle, timeMessage) => {
     try {
         const mailOptions = {
-            from: '"VHTask Notification" <email_cua_ban@gmail.com>',
+            from: '"VHTask Notification" <nguyenviethoang435@gmail.com>',
             to: toEmail,
             subject: `[VHTask] Cảnh báo thời hạn: ${taskTitle}`,
             html: `
