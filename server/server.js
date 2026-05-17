@@ -35,6 +35,10 @@ app.use("/auth", authRoutes);
 const startDeadlineJob = require("./jobs/deadlineJob");
 startDeadlineJob(); // Bắt đầu chạy công việc kiểm tra deadline mỗi phút
 
+// notification routes
+const notificationRoutes = require("./routes/notificationRoutes.js");
+app.use("/notifications", notificationRoutes);
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER
