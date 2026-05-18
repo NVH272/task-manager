@@ -29,6 +29,47 @@ function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- STATE THÔNG BÁO ---
+  const [notifications, setNotifications] = useState([]);
+  const [isNotiOpen, setIsNotiOpen] = useState(false);
+  const notiRef = useRef(null); // Để click ra ngoài thì đóng
+
+  const fetchNotifications = async () => {
+    if (!isLoggedIn) return;
+    try {
+      const res = await API.get("/notifications");
+      setNotifications(res.data);
+    } catch (error) {
+      console.error("Lỗi lấy thông báo", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    // Gọi API mỗi 1 phút để update số lượng chuông giống hệt lúc cron job chạy
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
+
+  // Click ra ngoài đóng menu thông báo
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notiRef.current && !notiRef.current.contains(event.target)) setIsNotiOpen(false);
+      // (Giữ nguyên logic cũ của dropdownRef cho Avatar)
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const markAsRead = async (id) => {
+    try {
+      await API.put(`/notifications/${id}/read`);
+      setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+    } catch (error) { }
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   // --- STYLE OBJECTS ---
   const styles = {
     layout: {
@@ -249,6 +290,67 @@ function Layout() {
             <>
               <Link to="/tasks" style={styles.navLink}>My Tasks</Link>
               <Link to="/completed" style={styles.navLink}>Completed</Link>
+
+              {/* --- KHU VỰC CHUÔNG THÔNG BÁO --- */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }} ref={notiRef}>
+                <button
+                  onClick={() => setIsNotiOpen(!isNotiOpen)}
+                  style={{ background: "none", border: "none", cursor: "pointer", position: "relative", padding: "4px", color: "#666", transition: "color 0.2s" }}
+                  onMouseOver={(e) => e.currentTarget.style.color = "#3A924A"}
+                  onMouseOut={(e) => e.currentTarget.style.color = "#666"}
+                >
+                  {/* Icon Bell */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+
+                  {/* Badge đếm số thông báo chưa đọc */}
+                  {unreadCount > 0 && (
+                    <span style={{ position: "absolute", top: 0, right: 0, backgroundColor: "#ef4444", color: "white", fontSize: "10px", fontWeight: "bold", padding: "2px 5px", borderRadius: "10px", transform: "translate(20%, -20%)" }}>
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* --- DROPDOWN DANH SÁCH THÔNG BÁO --- */}
+                {isNotiOpen && (
+                  <div style={{ position: "absolute", top: "40px", right: "-10px", width: "320px", backgroundColor: "#fff", border: "1px solid #f0f0f0", borderRadius: "12px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", zIndex: 100, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                    <div style={{ padding: "12px 16px", fontWeight: "600", fontSize: "14px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      Thông báo
+                      {unreadCount > 0 && (
+                        <button style={{ background: "none", border: "none", color: "#3A924A", fontSize: "12px", cursor: "pointer", fontWeight: "500" }}>
+                          Đánh dấu đã đọc tất cả
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: "30px 16px", textAlign: "center", color: "#888", fontSize: "13px" }}>Không có thông báo nào</div>
+                      ) : (
+                        notifications.map(noti => (
+                          <div
+                            key={noti._id}
+                            onClick={() => {
+                              if (!noti.isRead) markAsRead(noti._id);
+                            }}
+                            style={{ padding: "12px 16px", borderBottom: "1px solid #f9fafb", cursor: "pointer", backgroundColor: noti.isRead ? "#fff" : "#f0fdf4", transition: "background 0.2s", display: "flex", gap: "12px", alignItems: "flex-start" }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = noti.isRead ? "#f8fafc" : "#dcfce7"}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = noti.isRead ? "#fff" : "#f0fdf4"}
+                          >
+                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: noti.isRead ? "transparent" : "#3A924A", marginTop: "6px", flexShrink: 0 }}></div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: "13px", color: "#334155", lineHeight: "1.4", fontWeight: noti.isRead ? "400" : "500" }}>{noti.message}</div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px" }}>
+                                {new Date(noti.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div style={styles.avatarContainer} ref={dropdownRef}>
                 <img src="https://via.placeholder.com/150" alt="Avatar" style={styles.avatarImg} onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
                 {isDropdownOpen && (
